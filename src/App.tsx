@@ -847,7 +847,9 @@ function App() {
   if (isLoading) {
     return (
       <div className="loading-screen">
-        <div className="loader"></div>
+        <div className="loading-logo-container">
+          <img src={siteContent?.settings?.logo || "/LOGO_GPIB.jpg"} alt="Logo GPIB" />
+        </div>
         <p>Membuka situs GPIB Banda Aceh...</p>
       </div>
     )
