@@ -396,6 +396,11 @@ function App() {
   const handleUmatFile = (e: React.ChangeEvent<HTMLInputElement>, field: 'photo' | 'kk') => {
     const file = e.target.files?.[0]
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File terlalu besar! Maksimal ukuran file adalah 5 MB.')
+        e.target.value = ''
+        return
+      }
       const reader = new FileReader()
       reader.onloadend = async () => {
         const base64 = reader.result as string
@@ -496,11 +501,11 @@ function App() {
                   <textarea value={umatForm.alamat} onChange={e => setUmatForm({...umatForm, alamat: e.target.value})} />
                 </div>
                 <div className="form-group">
-                  <label>Upload Photo:</label>
+                  <label>Upload Photo (Maksimal 5 MB):</label>
                   <input type="file" accept="image/*" onChange={e => handleUmatFile(e, 'photo')} />
                 </div>
                 <div className="form-group">
-                  <label>Upload KK (Kartu Keluarga):</label>
+                  <label>Upload KK (Kartu Keluarga - Maksimal 5 MB):</label>
                   <input type="file" accept="image/*" onChange={e => handleUmatFile(e, 'kk')} />
                 </div>
               </div>
@@ -734,10 +739,15 @@ function App() {
                     <textarea value={userUmatForm.alamat} onChange={e => setUserUmatForm({...userUmatForm, alamat: e.target.value})} />
                   </div>
                   <div className="form-group">
-                    <label>Upload Photo:</label>
+                    <label>Upload Photo (Maksimal 5 MB):</label>
                     <input type="file" accept="image/*" onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
+                        if (file.size > 5 * 1024 * 1024) {
+                          alert('File terlalu besar! Maksimal ukuran file adalah 5 MB.');
+                          e.target.value = '';
+                          return;
+                        }
                         const reader = new FileReader();
                         reader.onloadend = async () => {
                           const base64 = reader.result as string;
@@ -749,10 +759,15 @@ function App() {
                     }} />
                   </div>
                   <div className="form-group">
-                    <label>Upload KK (Kartu Keluarga):</label>
+                    <label>Upload KK (Kartu Keluarga - Maksimal 5 MB):</label>
                     <input type="file" accept="image/*" onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
+                        if (file.size > 5 * 1024 * 1024) {
+                          alert('File terlalu besar! Maksimal ukuran file adalah 5 MB.');
+                          e.target.value = '';
+                          return;
+                        }
                         const reader = new FileReader();
                         reader.onloadend = async () => {
                           const base64 = reader.result as string;
