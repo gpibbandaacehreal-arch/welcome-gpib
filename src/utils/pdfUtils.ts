@@ -43,34 +43,34 @@ export const generateProposalPDF = async (data: ProposalData): Promise<Uint8Arra
     const fontSize = 12;
 
     // 5. Fill placeholders
-    // NOTE: In a real scenario, you'd need the exact coordinates (x, y). 
-    // I'll use placeholders for now. Let's assume some coordinates or search for text.
-    // For this task, I'll place them at common positions or the user might have specified.
-    // Since coordinates aren't provided, I'll use some default ones that usually fit a header/title area.
-    
-    // Nomor Surat placeholder
+    // Catatan: Karena pdf-lib tidak bisa mencari teks otomatis, kita menggunakan koordinat (x, y).
+    // Anda bisa menyesuaikan angka x dan y di bawah ini agar pas dengan posisi {tag} di COVER.pdf Anda.
+    // Tip: x: 0 adalah kiri, y: 0 adalah bawah halaman. A4 biasanya ~595x842 unit.
+
+    // --- POSISI NOMOR SURAT ---
     firstPage.drawText(data.nomorSurat, {
-      x: 150, // Adjust based on cover.pdf layout
-      y: 650, // Adjust based on cover.pdf layout
-      size: fontSize,
+      x: 180, // Geser horizontal
+      y: 675, // Geser vertikal
+      size: 11,
       font: font,
       color: rgb(0, 0, 0),
     });
 
-    // Tujuan Surat placeholder
+    // --- POSISI TUJUAN PROPOSAL ---
+    // Jika tujuan sangat panjang, kita bisa memecahnya (opsional)
     firstPage.drawText(data.tujuanSurat, {
-      x: 150, // Adjust based on cover.pdf layout
-      y: 600, // Adjust based on cover.pdf layout
-      size: fontSize,
+      x: 180,
+      y: 645,
+      size: 11,
       font: font,
       color: rgb(0, 0, 0),
     });
 
-    // Tanggal Surat placeholder
+    // --- POSISI TANGGAL SURAT ---
     firstPage.drawText(data.tanggalSurat, {
-      x: 400, // Adjust based on cover.pdf layout
-      y: 700, // Adjust based on cover.pdf layout
-      size: fontSize,
+      x: 440,
+      y: 715,
+      size: 11,
       font: font,
       color: rgb(0, 0, 0),
     });
