@@ -4,9 +4,10 @@ import LoginForm from './components/LoginForm'
 import { authService } from './services/auth'
 import AdminDashboard from './components/AdminDashboard'
 import { compressImage } from './utils/imageUtils'
+import DownloadProposal from './components/DownloadProposal'
 
 // Types
-type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Organisasi Gereja' | 'Data Umat' | 'Login' 
+type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Organisasi Gereja' | 'Data Umat' | 'Download' | 'Login' 
   | 'PA' | 'PT' | 'GP' | 'PKB' | 'PKP' 
   | 'GermasaLH' | 'PG' | 'Inforkom-Litbang';
 
@@ -826,6 +827,10 @@ function App() {
       return renderDataUmat()
     }
 
+    if (activeTab === 'Download') {
+      return <DownloadProposal />
+    }
+
     const currentPage = siteContent.pages[activeTab]
     if (!currentPage) return null
 
@@ -930,7 +935,7 @@ function App() {
           >
             Data Umat
           </li>
-          
+
           {isLoggedIn ? (
             <li onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}>Logout (Admin)</li>
           ) : (
@@ -941,6 +946,13 @@ function App() {
               Login
             </li>
           )}
+
+          <li 
+            className={activeTab === 'Download' ? 'active' : ''}
+            onClick={() => { setActiveTab('Download'); setIsMobileMenuOpen(false); }}
+          >
+            Download
+          </li>
         </ul>
       </nav>
 
