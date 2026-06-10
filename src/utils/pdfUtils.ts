@@ -32,47 +32,37 @@ export const generateProposalPDF = async (data: ProposalData): Promise<Uint8Arra
     // 2. Load the cover PDF document
     const coverDoc = await PDFDocument.load(coverBytes);
     console.log('Cover PDF berhasil di-load oleh pdf-lib.');
-    coverDoc.registerFontkit(fontkit);
+    
+    // 3. Get the form from the document
+    const form = coverDoc.getForm();
 
-    // 3. Get the first page of cover
-    const pages = coverDoc.getPages();
-    const firstPage = pages[0];
+    // 4. Fill the fields by their Bookmark names from Word
+    try {
+      // Mengisi field tanggal_surat
+      const tanggalField = form.getTextField('tanggal_surat');
+      tanggalField.setText(data.tanggalSurat);
+    } catch (e) {
+      console.warn('Field tanggal_surat tidak ditemukan di PDF Form, mencoba fallback koordinat...');
+    }
 
-    // 4. Set font (using standard font for simplicity, or we could load custom)
-    const font = await coverDoc.embedFont(StandardFonts.HelveticaBold);
+    try {
+      // Mengisi field nomor_surat
+      const nomorField = form.getTextField('nomor_surat');
+      nomorField.setText(data.nomorSurat);
+    } catch (e) {
+      console.warn('Field nomor_surat tidak ditemukan di PDF Form');
+    }
 
-    // 5. Fill placeholders
-    // Catatan: Karena pdf-lib tidak bisa mencari teks otomatis, kita menggunakan koordinat (x, y).
-    // Anda bisa menyesuaikan angka x dan y di bawah ini agar pas dengan posisi {tag} di COVER.pdf Anda.
-    // Tip: x: 0 adalah kiri, y: 0 adalah bawah halaman. A4 biasanya ~595x842 unit.
+    try {
+      // Mengisi field tujuan_surat
+      const tujuanField = form.getTextField('tujuan_surat');
+      tujuanField.setText(data.tujuanSurat);
+    } catch (e) {
+      console.warn('Field tujuan_surat tidak ditemukan di PDF Form');
+    }
 
-    // --- POSISI NOMOR SURAT ---
-    firstPage.drawText(data.nomorSurat, {
-      x: 180, // Geser horizontal
-      y: 675, // Geser vertikal
-      size: 11,
-      font: font,
-      color: rgb(0, 0, 0),
-    });
-
-    // --- POSISI TUJUAN PROPOSAL ---
-    // Jika tujuan sangat panjang, kita bisa memecahnya (opsional)
-    firstPage.drawText(data.tujuanSurat, {
-      x: 180,
-      y: 645,
-      size: 11,
-      font: font,
-      color: rgb(0, 0, 0),
-    });
-
-    // --- POSISI TANGGAL SURAT ---
-    firstPage.drawText(data.tanggalSurat, {
-      x: 440,
-      y: 715,
-      size: 11,
-      font: font,
-      color: rgb(0, 0, 0),
-    });
+    // 5. Flatten the form to make the text part of the PDF (tidak bisa diedit lagi oleh user)
+    form.flatten();
 
     // 6. Load the ISI PDF document
     const isiDoc = await PDFDocument.load(isiBytes);
