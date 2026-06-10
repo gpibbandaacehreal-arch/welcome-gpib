@@ -34,33 +34,30 @@ export const generateProposalPDF = async (data: ProposalData): Promise<Uint8Arra
     
     // 3. Get the form from the document
     const form = coverDoc.getForm();
+    
+    // DEBUG: Lihat semua nama field yang tersedia di PDF
+    const fields = form.getFields();
+    console.log('Daftar field yang ditemukan di PDF:', fields.map(f => f.getName()));
 
     // 4. Fill the fields by their Bookmark names from Word
-    try {
-      // Mengisi field tanggal_surat
-      const tanggalField = form.getTextField('tanggal_surat');
-      tanggalField.setText(data.tanggalSurat);
-    } catch (e) {
-      console.warn('Field tanggal_surat tidak ditemukan di PDF Form, mencoba fallback koordinat...');
-    }
+    const fillField = (name: string, value: string) => {
+      try {
+        const field = form.getTextField(name);
+        field.setText(value);
+        console.log(`Berhasil mengisi field "${name}" dengan: ${value}`);
+      } catch (e) {
+        console.warn(`Gagal mengisi field "${name}":`, e instanceof Error ? e.message : e);
+      }
+    };
 
-    try {
-      // Mengisi field nomor_surat
-      const nomorField = form.getTextField('nomor_surat');
-      nomorField.setText(data.nomorSurat);
-    } catch (e) {
-      console.warn('Field nomor_surat tidak ditemukan di PDF Form');
-    }
+    fillField('tanggal_surat', data.tanggalSurat);
+    fillField('nomor_surat', data.nomorSurat);
+    fillField('tujuan_surat', data.tujuanSurat);
 
-    try {
-      // Mengisi field tujuan_surat
-      const tujuanField = form.getTextField('tujuan_surat');
-      tujuanField.setText(data.tujuanSurat);
-    } catch (e) {
-      console.warn('Field tujuan_surat tidak ditemukan di PDF Form');
-    }
-
-    // 5. Flatten the form to make the text part of the PDF (tidak bisa diedit lagi oleh user)
+    // Pastikan tampilan field diupdate sebelum di-flatten
+    // form.updateFieldAppearances(); // Opsional jika font standar bermasalah
+    
+    // 5. Flatten the form to make the text part of the PDF
     form.flatten();
 
     // 6. Load the ISI PDF document
