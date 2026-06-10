@@ -6,8 +6,15 @@ interface ProposalRecord extends ProposalData {
   noUrut: number;
 }
 
-const DownloadProposal: React.FC = () => {
+interface DownloadProposalProps {
+  isLoggedIn: boolean;
+}
+
+const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
   const [tujuanSurat, setTujuanSurat] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTujuan, setEditTujuan] = useState('');
+  const [editNomor, setEditNomor] = useState('');
   
   const [history, setHistory] = useState<ProposalRecord[]>(() => {
     const saved = localStorage.getItem('proposalHistory');
@@ -77,6 +84,38 @@ const DownloadProposal: React.FC = () => {
     localStorage.setItem('proposalHistory', JSON.stringify(updatedHistory));
   };
 
+  const handleEdit = (record: ProposalRecord) => {
+    setEditingId(record.id);
+    setEditTujuan(record.tujuanSurat);
+    setEditNomor(record.nomorSurat);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingId) return;
+    const updatedHistory = history.map(h => 
+      h.id === editingId ? { ...h, tujuanSurat: editTujuan, nomorSurat: editNomor } : h
+    );
+    setHistory(updatedHistory);
+    localStorage.setItem('proposalHistory', JSON.stringify(updatedHistory));
+    setEditingId(null);
+  };
+
+  const handleDelete = (id: string) => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus data ini?')) return;
+    
+    const updatedHistory = history.filter(h => h.id !== id);
+    setHistory(updatedHistory);
+    localStorage.setItem('proposalHistory', JSON.stringify(updatedHistory));
+
+    // Reset nextNoUrut if history is empty or if we deleted the highest number
+    if (updatedHistory.length === 0) {
+      setNextNoUrut(1);
+    } else {
+      const lastNo = Math.max(...updatedHistory.map(h => h.noUrut));
+      setNextNoUrut(lastNo + 1);
+    }
+  };
+
   const handleDownload = async (record: ProposalRecord) => {
     try {
       const pdfBytes = await generateProposalPDF(record);
@@ -136,10 +175,45 @@ const DownloadProposal: React.FC = () => {
               {history.length > 0 ? history.map((record, index) => (
                 <tr key={record.id}>
                   <td>{history.length - index}</td>
-                  <td>{record.nomorSurat}</td>
-                  <td>{record.tujuanSurat}</td>
                   <td>
-                    <button className="btn-edit-small" onClick={() => handleDownload(record)}>Download PDF</button>
+                    {editingId === record.id ? (
+                      <input 
+                        type="text" 
+                        value={editNomor} 
+                        onChange={(e) => setEditNomor(e.target.value)} 
+                        className="edit-input-small"
+                      />
+                    ) : record.nomorSurat}
+                  </td>
+                  <td>
+                    {editingId === record.id ? (
+                      <input 
+                        type="text" 
+                        value={editTujuan} 
+                        onChange={(e) => setEditTujuan(e.target.value)} 
+                        className="edit-input-small"
+                      />
+                    ) : record.tujuanSurat}
+                  </td>
+                  <td>
+                    <div className="table-actions">
+                      {editingId === record.id ? (
+                        <>
+                          <button className="btn-save-small" onClick={handleSaveEdit}>Simpan</button>
+                          <button className="btn-delete-small" onClick={() => setEditingId(null)}>Batal</button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="btn-edit-small" onClick={() => handleDownload(record)}>Download</button>
+                          {isLoggedIn && (
+                            <>
+                              <button className="btn-edit-small" style={{ backgroundColor: '#2196F3' }} onClick={() => handleEdit(record)}>Edit</button>
+                              <button className="btn-delete-small" onClick={() => handleDelete(record.id)}>Hapus</button>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )) : (

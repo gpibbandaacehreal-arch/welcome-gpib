@@ -828,7 +828,7 @@ function App() {
     }
 
     if (activeTab === 'Download') {
-      return <DownloadProposal />
+      return <DownloadProposal isLoggedIn={isLoggedIn} />
     }
 
     const currentPage = siteContent.pages[activeTab]
