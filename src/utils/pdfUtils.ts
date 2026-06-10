@@ -35,18 +35,25 @@ export const generateProposalPDF = async (data: ProposalData): Promise<Uint8Arra
     // 3. Get the form from the document
     const form = coverDoc.getForm();
     
-    // DEBUG: Lihat semua nama field yang tersedia di PDF
+    // DEBUG: Lihat semua nama field yang tersedia di PDF untuk memastikan kecocokan
     const fields = form.getFields();
-    console.log('Daftar field yang ditemukan di PDF:', fields.map(f => f.getName()));
+    const fieldNames = fields.map(f => f.getName());
+    console.log('Daftar field yang terdeteksi di PDF Nitro Pro:', fieldNames);
 
-    // 4. Fill the fields by their Bookmark names from Word
+    // 4. Fill the fields by their names (tanggal_surat, nomor_surat, tujuan_surat)
     const fillField = (name: string, value: string) => {
       try {
-        const field = form.getTextField(name);
-        field.setText(value);
-        console.log(`Berhasil mengisi field "${name}" dengan: ${value}`);
+        // Cek apakah field ada sebelum mencoba mengisi
+        const exists = fieldNames.includes(name);
+        if (exists) {
+          const field = form.getTextField(name);
+          field.setText(value);
+          console.log(`[SUCCESS] Field "${name}" berhasil diisi.`);
+        } else {
+          console.warn(`[MISSING] Field "${name}" tidak ditemukan di PDF. Nama yang tersedia: ${fieldNames.join(', ')}`);
+        }
       } catch (e) {
-        console.warn(`Gagal mengisi field "${name}":`, e instanceof Error ? e.message : e);
+        console.error(`[ERROR] Gagal memproses field "${name}":`, e);
       }
     };
 
@@ -54,10 +61,14 @@ export const generateProposalPDF = async (data: ProposalData): Promise<Uint8Arra
     fillField('nomor_surat', data.nomorSurat);
     fillField('tujuan_surat', data.tujuanSurat);
 
-    // Pastikan tampilan field diupdate sebelum di-flatten
-    // form.updateFieldAppearances(); // Opsional jika font standar bermasalah
+    // Update tampilan field (penting untuk beberapa generator PDF agar teks muncul)
+    try {
+      form.updateFieldAppearances();
+    } catch (e) {
+      console.warn('Gagal updateFieldAppearances, melanjutkan...', e);
+    }
     
-    // 5. Flatten the form to make the text part of the PDF
+    // 5. Flatten the form
     form.flatten();
 
     // 6. Load the ISI PDF document
