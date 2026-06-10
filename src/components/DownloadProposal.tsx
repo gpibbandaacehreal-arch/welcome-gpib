@@ -118,18 +118,29 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
 
   const handleDownload = async (record: ProposalRecord) => {
     try {
+      console.log('Memulai proses download untuk:', record);
       const pdfBytes = await generateProposalPDF(record);
+      console.log('PDF berhasil di-generate, ukuran:', pdfBytes.length, 'bytes');
+      
       const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Proposal_${record.nomorSurat.replace(/\//g, '-')}.pdf`;
+      
+      // Clean up filename for the link
+      const safeFileName = `Proposal_${record.nomorSurat.replace(/\//g, '-')}.pdf`;
+      link.download = safeFileName;
+      
+      console.log('Memicu download browser:', safeFileName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch {
-      alert('Gagal mendownload PDF. Pastikan file COVER.pdf dan ISI.pdf ada di folder public.');
+      
+      // Revoke the object URL after a short delay to ensure the browser has started the download
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (err: any) {
+      console.error('Detail Error Download:', err);
+      alert(`Gagal mendownload PDF: ${err.message || 'Error tidak diketahui'}. \n\nPastikan file COVER.pdf dan ISI.pdf (HURUF BESAR) sudah ada di folder public/`);
     }
   };
 

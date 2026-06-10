@@ -8,18 +8,30 @@ export interface ProposalData {
 }
 
 export const generateProposalPDF = async (data: ProposalData): Promise<Uint8Array> => {
+  console.log('Memulai generateProposalPDF dengan data:', data);
   try {
     // 1. Load cover.pdf and isi.pdf from public folder
     const coverUrl = '/COVER.pdf';
     const isiUrl = '/ISI.pdf';
 
-    const [coverBytes, isiBytes] = await Promise.all([
-      fetch(coverUrl).then((res) => res.arrayBuffer()),
-      fetch(isiUrl).then((res) => res.arrayBuffer()),
+    console.log('Fetching PDF files...');
+    const [coverRes, isiRes] = await Promise.all([
+      fetch(coverUrl),
+      fetch(isiUrl)
     ]);
+
+    if (!coverRes.ok) throw new Error(`Gagal mengambil COVER.pdf: ${coverRes.status} ${coverRes.statusText}`);
+    if (!isiRes.ok) throw new Error(`Gagal mengambil ISI.pdf: ${isiRes.status} ${isiRes.statusText}`);
+
+    const [coverBytes, isiBytes] = await Promise.all([
+      coverRes.arrayBuffer(),
+      isiRes.arrayBuffer()
+    ]);
+    console.log('File PDF berhasil dimuat ke memori.');
 
     // 2. Load the cover PDF document
     const coverDoc = await PDFDocument.load(coverBytes);
+    console.log('Cover PDF berhasil di-load oleh pdf-lib.');
     coverDoc.registerFontkit(fontkit);
 
     // 3. Get the first page of cover
