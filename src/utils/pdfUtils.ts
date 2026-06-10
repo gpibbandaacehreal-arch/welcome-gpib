@@ -40,7 +40,6 @@ export const generateProposalPDF = async (data: ProposalData): Promise<Uint8Arra
 
     // 4. Set font (using standard font for simplicity, or we could load custom)
     const font = await coverDoc.embedFont(StandardFonts.HelveticaBold);
-    const fontSize = 12;
 
     // 5. Fill placeholders
     // Catatan: Karena pdf-lib tidak bisa mencari teks otomatis, kita menggunakan koordinat (x, y).
