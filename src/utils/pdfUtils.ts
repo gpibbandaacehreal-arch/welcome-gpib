@@ -1,5 +1,4 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import fontkit from '@pdf-lib/fontkit';
+import { PDFDocument } from 'pdf-lib';
 
 export interface ProposalData {
   nomorSurat: string;
