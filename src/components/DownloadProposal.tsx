@@ -38,24 +38,29 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
           return lastNo + 1;
         }
       } catch (e) {
-        return 1;
+        return 13;
       }
     }
-    return 1;
+    return 13;
   });
 
   const getCurrentDateInfo = () => {
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, '0');
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const mm = now.getMonth() + 1; // numeric month
     const yyyy = now.getFullYear();
-    return { dd, mm, yyyy };
+    const yyShort = String(yyyy).slice(-2);
+    
+    // Convert to Roman Numeral
+    const romanMonths = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+    const mmRoman = romanMonths[mm - 1];
+    
+    return { dd, mm: String(mm).padStart(2, '0'), mmRoman, yyyy, yyShort };
   };
 
   const generateNomorSurat = (noUrut: number) => {
-    const { mm, yyyy } = getCurrentDateInfo();
-    const xxx = String(noUrut).padStart(3, '0');
-    return `${xxx}/GPIB.30THN/${mm}/${yyyy}`;
+    const { mmRoman, yyShort } = getCurrentDateInfo();
+    return `${noUrut}/${mmRoman}-‘${yyShort}/MJ-BA/PPSGGR30-1`;
   };
 
   const handleProses = () => {
@@ -109,7 +114,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
 
     // Reset nextNoUrut if history is empty or if we deleted the highest number
     if (updatedHistory.length === 0) {
-      setNextNoUrut(1);
+      setNextNoUrut(13);
     } else {
       const lastNo = Math.max(...updatedHistory.map(h => h.noUrut));
       setNextNoUrut(lastNo + 1);
