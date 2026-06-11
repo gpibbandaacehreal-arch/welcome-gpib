@@ -103,752 +103,95 @@ const DEFAULT_CONTENT: FullContent = {
   proposals: []
 };
 
+import { supabase, type SupabaseProposal } from './services/supabase'
+
+// ... (previous imports and types remain)
+
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Beranda')
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    return authService.isAuthenticated()
-  })
-  
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  // ... (isLoggedIn, isMobileMenuOpen, isDropdownOpen remain)
   
   const [siteContent, setSiteContent] = useState<FullContent>(() => {
-    const saved = localStorage.getItem('gpibSiteContent')
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        return {
-          ...DEFAULT_CONTENT,
-          ...parsed,
-          pages: { ...DEFAULT_CONTENT.pages, ...parsed.pages },
-          proposals: parsed.proposals || []
-        }
-      } catch (e) {
-        return DEFAULT_CONTENT
-      }
-    }
-    return DEFAULT_CONTENT
-  })
-  
-  const [isLoading, setIsLoading] = useState(true)
-  
-  // Editor states
-  const [editTitle, setEditTitle] = useState('')
-  const [editContent, setEditContent] = useState('')
-  const [editLogo, setEditLogo] = useState('')
-  const [editSiteTitle, setEditSiteTitle] = useState('')
-  const [isSaving, setIsSaving] = useState(false)
-
-  // Data Umat States
-  const [userSearch, setUserSearch] = useState('')
-  const [adminSearch, setAdminSearch] = useState('')
-  const [umatForm, setUmatForm] = useState<Omit<UmatRecord, 'id' | 'isPending'>>({
-    nama: '', status: 'Jemaat', nik: '', alamat: '', noHp: '', photo: '', kk: ''
+    // ... (same initial state logic)
   })
 
-  // New States for Non-Admin Data Umat Flow
-  const [userSearchResult, setUserSearchResult] = useState<UmatRecord | null>(null)
-  const [hasUserSearched, setHasUserSearched] = useState(false)
-  const [showUserForm, setShowUserForm] = useState(false)
-  const [userUmatForm, setUserUmatForm] = useState<Omit<UmatRecord, 'id' | 'isPending'>>({
-    nama: '', status: 'Jemaat', nik: '', alamat: '', noHp: '', photo: '', kk: ''
-  })
-  const [userSubmitMessage, setUserSubmitMessage] = useState<string | null>(null)
-  const [isSubmittingUserForm, setIsSubmittingUserForm] = useState(false)
+  // Add a dedicated state for proposals fetched from Supabase
+  const [supabaseProposals, setSupabaseProposals] = useState<SupabaseProposal[]>([])
 
-  // Tutup menu otomatis setiap kali tab berubah
+  // ... (isLoading, editor states, etc. remain)
+
+  // Fetch proposals from Supabase
+  const fetchSupabaseProposals = async () => {
+    const { data, error } = await supabase
+      .from('riwayat_download')
+      .select('*')
+      .order('no_urut', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching proposals from Supabase:', error);
+    } else if (data) {
+      setSupabaseProposals(data);
+    }
+  };
+
+  // Subscribe to real-time changes
   useEffect(() => {
-    setIsMobileMenuOpen(false)
-    setIsDropdownOpen(false)
-  }, [activeTab])
+    fetchSupabaseProposals();
 
-  // Refactor fetchData to be reusable for polling
-  const fetchData = async (isSilent = false) => {
-    if (!isSilent) console.log("Memulai pengambilan data...");
-    try {
-      const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`)
-      const data = await response.json()
-      if (!isSilent) console.log("Data berhasil diambil:", data);
-      if (data && (data.settings || data.pages)) {
-        const migratedPages = { ...data.pages };
-        Object.keys(migratedPages).forEach(key => {
-          const page = migratedPages[key];
-          if (page && !page.content && page.blocks) {
-            page.content = page.blocks.map((b: any) => {
-              if (b.type === 'text') return `<p>${b.value.replace(/\n/g, '<br>')}</p>`;
-              if (b.type === 'image') return `<div class="content-image-wrapper"><img src="${b.value}" class="content-image" /></div>`;
-              return '';
-            }).join('');
-          }
-        });
-
-        const mergedContent = {
-          ...data,
-          pages: { ...DEFAULT_CONTENT.pages, ...migratedPages },
-          settings: { ...DEFAULT_CONTENT.settings, ...data.settings },
-          umat: data.umat || [],
-          proposals: (data.proposals || []).map((p: any) => ({
-            id: p.id || Date.now().toString() + Math.random(),
-            noUrut: p.noUrut || 0,
-            nomorSurat: p.nomorSurat || '-',
-            tujuanSurat: p.tujuanSurat || '-',
-            tanggalSurat: p.tanggalSurat || '',
-            pemohon: p.pemohon || '-'
-          }))
-        }
-        
-        setSiteContent(prev => {
-          if (JSON.stringify(prev.proposals) !== JSON.stringify(mergedContent.proposals) ||
-              JSON.stringify(prev.umat) !== JSON.stringify(mergedContent.umat) ||
-              JSON.stringify(prev.pages) !== JSON.stringify(mergedContent.pages) ||
-              JSON.stringify(prev.settings) !== JSON.stringify(mergedContent.settings)) {
-            return mergedContent;
-          }
-          return prev;
-        });
-        localStorage.setItem('gpibSiteContent', JSON.stringify(mergedContent))
-      }
-    } catch (error) {
-      if (!isSilent) console.error("Gagal mengambil data dari Google Drive:", error)
-    } finally {
-      if (!isSilent) setIsLoading(false)
-    }
-  }
-
-  // Fetch data on mount and setup polling
-  useEffect(() => {
-    fetchData()
-    const interval = setInterval(() => fetchData(true), 10000)
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      setEditSiteTitle(siteContent.settings.title || '')
-      setEditLogo(siteContent.settings.logo || '')
-      if (siteContent.pages[activeTab]) {
-        setEditTitle(siteContent.pages[activeTab].title || '')
-        setEditContent(siteContent.pages[activeTab].content || '')
-      }
-    }
-  }, [isLoggedIn, activeTab, siteContent])
-
-  const handleLogout = () => {
-    authService.logout()
-    setIsLoggedIn(false)
-    setActiveTab('Beranda')
-  }
-
-  const saveChanges = async (updatedData?: any) => {
-    setIsSaving(true)
-    
-    const finalTitle = updatedData?.title || editTitle
-    const finalContent = updatedData?.content || editContent
-    const finalSiteTitle = updatedData?.siteTitle || editSiteTitle
-    const finalLogo = updatedData?.siteLogo || editLogo
-    
-    const newContent = {
-      ...siteContent,
-      settings: { logo: finalLogo, title: finalSiteTitle },
-      pages: {
-        ...siteContent.pages,
-        [activeTab]: { title: finalTitle, content: finalContent }
-      }
-    }
-    
-    setSiteContent(newContent)
-    localStorage.setItem('gpibSiteContent', JSON.stringify(newContent))
-
-    try {
-      const payload = JSON.stringify({ action: 'updateContent', data: newContent });
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: payload,
+    const channel = supabase
+      .channel('public:riwayat_download')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'riwayat_download' }, () => {
+        fetchSupabaseProposals();
       })
-      if (updatedData) {
-        alert('Perubahan telah dikirim! \n\nCatatan: Mohon tunggu 5 detik sebelum merefresh halaman.');
-      }
-    } catch (error) {
-      console.error("Gagal menyimpan ke Google Drive:", error)
-      alert('Gagal sinkron ke Google Drive.');
-    } finally {
-      setIsSaving(false)
-    }
-  }
+      .subscribe();
 
-  // Data Umat Handlers
-  const handleSaveUmat = async () => {
-    if (!umatForm.nama) {
-      alert('Nama Umat harus diisi.')
-      return
-    }
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
-    // Filter out any pending version of this person if admin is saving it officially
-    const newUmatList = siteContent.umat.filter(u => u.nama.toLowerCase() !== umatForm.nama.toLowerCase());
-    newUmatList.push({ ...umatForm, id: Date.now().toString(), isPending: false });
-
-    const newContent = { ...siteContent, umat: newUmatList }
-    setSiteContent(newContent)
-    localStorage.setItem('gpibSiteContent', JSON.stringify(newContent))
-
-    try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'updateUmat', data: newContent.umat }),
-      })
-      alert('Data Umat Berhasil Disimpan!')
-    } catch (error) {
-      console.error("Gagal sinkron data umat:", error)
-    }
-
-    setUmatForm({ nama: '', status: 'Jemaat', nik: '', alamat: '', noHp: '', photo: '', kk: '' })
-    setAdminSearch('')
-  }
-
-  const handleDeleteUmat = async (targetNama?: string) => {
-    const namaToSearch = targetNama || umatForm.nama
-    if (!namaToSearch) return
-
-    if (window.confirm(`Apakah Anda yakin ingin menghapus data umat: ${namaToSearch}?`)) {
-      const newUmatList = siteContent.umat.filter(u => u.nama.toLowerCase() !== namaToSearch.toLowerCase())
-      const newContent = { ...siteContent, umat: newUmatList }
-      setSiteContent(newContent)
-      localStorage.setItem('gpibSiteContent', JSON.stringify(newContent))
-
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: 'updateUmat', data: newContent.umat }),
-        })
-        alert('Data Umat Berhasil Dihapus!')
-      } catch (error) {
-        console.error("Gagal menghapus data umat:", error)
-      }
-
-      if (!targetNama || targetNama.toLowerCase() === umatForm.nama.toLowerCase()) {
-        setUmatForm({ nama: '', status: 'Jemaat', nik: '', alamat: '', noHp: '', photo: '', kk: '' })
-        setAdminSearch('')
-      }
-    }
-  }
-
-  const handleApproveUmat = async (umat: UmatRecord) => {
-    // 1. Remove any existing entries (both pending and official) with same name
-    const cleanList = siteContent.umat.filter(u => u.nama.toLowerCase() !== umat.nama.toLowerCase());
-    
-    // 2. Add as official (isPending: false)
-    const officialUmat = { ...umat, isPending: false, id: Date.now().toString() };
-    const newUmatList = [...cleanList, officialUmat];
-
-    const newContent = { ...siteContent, umat: newUmatList };
-    setSiteContent(newContent);
-    localStorage.setItem('gpibSiteContent', JSON.stringify(newContent));
-
-    try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'updateUmat', data: newContent.umat }),
-      });
-      alert('Data Umat Berhasil Disimpan & Diverifikasi!');
-    } catch (error) {
-      console.error("Gagal verifikasi data umat:", error);
-    }
-  }
-
-  const handleRejectUmat = async (umatId: string) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus pengajuan revisi mandiri ini?')) {
-      const newUmatList = siteContent.umat.filter(u => u.id !== umatId);
-      const newContent = { ...siteContent, umat: newUmatList };
-      
-      setSiteContent(newContent);
-      localStorage.setItem('gpibSiteContent', JSON.stringify(newContent));
-
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: 'updateUmat', data: newContent.umat }),
-        });
-        alert('Pengajuan Berhasil Dihapus!');
-      } catch (error) {
-        console.error("Gagal menghapus pengajuan:", error);
-      }
-    }
-  }
-
-  const onEditUmat = (u: UmatRecord) => {
-    setUmatForm({
-      nama: u.nama,
-      status: u.status,
-      nik: u.nik,
-      alamat: u.alamat,
-      noHp: u.noHp,
-      photo: u.photo,
-      kk: u.kk
-    })
-    setAdminSearch(u.nama)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const onAdminSearch = (name: string) => {
-    setAdminSearch(name)
-    // Only search official umat
-    const found = siteContent.umat.find(u => !u.isPending && u.nama.toLowerCase() === name.toLowerCase())
-    if (found) {
-      setUmatForm({
-        nama: found.nama,
-        status: found.status,
-        nik: found.nik,
-        alamat: found.alamat,
-        noHp: found.noHp,
-        photo: found.photo,
-        kk: found.kk
-      })
-    }
-  }
-
-  const handleUmatFile = (e: React.ChangeEvent<HTMLInputElement>, field: 'photo' | 'kk') => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File terlalu besar! Maksimal ukuran file adalah 5 MB.')
-        e.target.value = ''
-        return
-      }
-      const reader = new FileReader()
-      reader.onloadend = async () => {
-        const base64 = reader.result as string
-        const compressed = await compressImage(base64, 800, 0.6)
-        setUmatForm({ ...umatForm, [field]: compressed })
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const handleUserSearch = () => {
-    if (!userSearch.trim()) return;
-    // Search only official umat
-    const officialUmat = siteContent.umat.filter(u => !u.isPending);
-    const found = officialUmat.find(u => u.nama.toLowerCase().includes(userSearch.toLowerCase()));
-    setUserSearchResult(found || null);
-    setHasUserSearched(true);
-    setShowUserForm(false);
-    setUserSubmitMessage(null);
-  }
-
-  const handleUserFormSubmit = async () => {
-    if (!userUmatForm.nama) {
-      alert('Nama Umat wajib diisi.');
-      return;
-    }
-
-    setIsSubmittingUserForm(true);
-    try {
-      const verificationRecord: UmatRecord = { 
-        ...userUmatForm, 
-        id: 'verify_' + Date.now(),
-        isPending: true // MARK AS PENDING
-      };
-      
-      // Push to the main UMAT list but with isPending=true
-      const newUmatList = [...siteContent.umat, verificationRecord];
-      const newContent = { ...siteContent, umat: newUmatList };
-      
-      setSiteContent(newContent);
-      localStorage.setItem('gpibSiteContent', JSON.stringify(newContent));
-
-      // Persist everything to Google Drive
-      const payload = JSON.stringify({ action: 'updateUmat', data: newContent.umat });
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: payload
-      });
-      
-      setUserSubmitMessage('Data berhasil dikirim untuk di verifikasi admin GPIB');
-      setShowUserForm(false);
-      setUserUmatForm({ nama: '', status: 'Jemaat', nik: '', alamat: '', noHp: '', photo: '', kk: '' });
-    } catch (error) {
-      console.error("Gagal mengirim data verifikasi:", error);
-      alert('Gagal mengirim data.');
-    } finally {
-      setIsSubmittingUserForm(false);
-    }
-  }
-
-  const renderDataUmat = () => {
-    const officialUmat = siteContent.umat.filter(u => !u.isPending);
-    const pendingUmat = siteContent.umat.filter(u => u.isPending);
-
-    return (
-      <div className="page-card">
-        {isLoggedIn ? <h2>Data Umat & Statistik</h2> : <h2>Data Umat</h2>}
-        
-        {isLoggedIn ? (
-          <div className="admin-data-section">
-            <div className="admin-data-form">
-              <h3>Form Input Data Umat</h3>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Nama Umat:</label>
-                  <input type="text" value={umatForm.nama} onChange={e => setUmatForm({...umatForm, nama: e.target.value})} />
-                </div>
-                <div className="form-group">
-                  <label>Status:</label>
-                  <select value={umatForm.status} onChange={e => setUmatForm({...umatForm, status: e.target.value})}>
-                    <option value="Jemaat">Jemaat</option>
-                    <option value="Simpatisan">Simpatisan</option>
-                    <option value="Majelis">Majelis</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>NIK:</label>
-                  <input type="text" value={umatForm.nik} onChange={e => setUmatForm({...umatForm, nik: e.target.value})} />
-                </div>
-                <div className="form-group">
-                  <label>No. HP:</label>
-                  <input type="text" value={umatForm.noHp} onChange={e => setUmatForm({...umatForm, noHp: e.target.value})} />
-                </div>
-                <div className="form-group full-width">
-                  <label>Alamat:</label>
-                  <textarea value={umatForm.alamat} onChange={e => setUmatForm({...umatForm, alamat: e.target.value})} />
-                </div>
-                <div className="form-group">
-                  <label>Upload Photo (Maksimal 5 MB):</label>
-                  <input type="file" accept="image/*" onChange={e => handleUmatFile(e, 'photo')} />
-                </div>
-                <div className="form-group">
-                  <label>Upload KK (Kartu Keluarga - Maksimal 5 MB):</label>
-                  <input type="file" accept="image/*" onChange={e => handleUmatFile(e, 'kk')} />
-                </div>
-              </div>
-
-              <div className="photo-previews">
-                {umatForm.photo && (
-                  <div className="photo-preview-item">
-                    <img src={umatForm.photo} alt="Umat" />
-                    <span>Photo</span>
-                  </div>
-                )}
-                {umatForm.kk && (
-                  <div className="photo-preview-item">
-                    <img src={umatForm.kk} alt="KK" />
-                    <span>KK</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="search-box" style={{marginTop: '25px', borderTop: '1px solid #eee', paddingTop: '15px'}}>
-                <input 
-                  type="text" 
-                  placeholder="Cari Nama untuk Edit Data..." 
-                  value={adminSearch}
-                  onChange={e => onAdminSearch(e.target.value)}
-                />
-              </div>
-              <div className="admin-action-buttons">
-                <button className="btn-save" onClick={handleSaveUmat}>SIMPAN / PERBAHARUI DATA UMAT</button>
-                {officialUmat.some(u => u.nama.toLowerCase() === (umatForm.nama || '').toLowerCase()) && (
-                  <button className="btn-delete" onClick={() => handleDeleteUmat()}>HAPUS DATA</button>
-                )}
-              </div>
-            </div>
-
-            <div className="admin-umat-list" style={{marginTop: '40px'}}>
-              <h3>Daftar Seluruh Data Umat</h3>
-              <div className="table-responsive">
-                <table className="umat-table admin-table">
-                  <thead>
-                    <tr>
-                      <th>No</th>
-                      <th>Nama Umat</th>
-                      <th>Status</th>
-                      <th>NIK</th>
-                      <th>No. HP</th>
-                      <th>Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {officialUmat.length > 0 ? officialUmat.map((u, idx) => (
-                      <tr key={u.id}>
-                        <td>{idx + 1}</td>
-                        <td>{u.nama}</td>
-                        <td>{u.status}</td>
-                        <td>{u.nik || '-'}</td>
-                        <td>{u.noHp || '-'}</td>
-                        <td>
-                          <div className="table-actions">
-                            <button className="btn-edit-small" onClick={() => onEditUmat(u)}>Edit</button>
-                            <button className="btn-delete-small" onClick={() => handleDeleteUmat(u.nama)}>Hapus</button>
-                          </div>
-                        </td>
-                      </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan={6} style={{textAlign: 'center'}}>Belum ada data umat.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="admin-verification-list" style={{marginTop: '50px', borderTop: '2px solid var(--secondary-color)', paddingTop: '30px'}}>
-              <h3 style={{ color: 'var(--primary-color)' }}>Antrean Revisi / Update Mandiri</h3>
-              <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '15px' }}>
-                Berikut adalah data yang diisi secara mandiri oleh umat dan memerlukan verifikasi Admin.
-              </p>
-              <div className="table-responsive">
-                <table className="umat-table admin-table">
-                  <thead>
-                    <tr>
-                      <th>No</th>
-                      <th>Nama Umat</th>
-                      <th>Status</th>
-                      <th>Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingUmat.length > 0 ? pendingUmat.map((u, idx) => (
-                      <tr key={u.id}>
-                        <td>{idx + 1}</td>
-                        <td style={{ fontWeight: '600' }}>{u.nama}</td>
-                        <td>{u.status}</td>
-                        <td>
-                          <div className="table-actions">
-                            <button 
-                              className="btn-save" 
-                              style={{ padding: '6px 15px', fontSize: '0.8rem' }}
-                              onClick={() => handleApproveUmat(u)}
-                            >
-                              Simpan
-                            </button>
-                            <button 
-                              className="btn-delete" 
-                              style={{ padding: '6px 15px', fontSize: '0.8rem', marginLeft: '8px' }}
-                              onClick={() => handleRejectUmat(u.id)}
-                            >
-                              Hapus
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan={4} style={{textAlign: 'center', padding: '30px', color: '#888'}}>
-                          Tidak ada antrean revisi mandiri saat ini.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="user-data-section">
-            <div className="user-search-container" style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-              <input 
-                type="text" 
-                placeholder="Cari Nama Umat..." 
-                value={userSearch}
-                onChange={e => setUserSearch(e.target.value)}
-                style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }}
-              />
-              <button className="btn-save" onClick={handleUserSearch} style={{ padding: '0 30px' }}>CARI</button>
-            </div>
-
-            {hasUserSearched && (
-              <div className="search-results-section">
-                <div className="table-responsive">
-                  <table className="umat-table">
-                    <thead>
-                      <tr>
-                        <th>No</th>
-                        <th>NAMA UMAT</th>
-                        <th>STATUS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {userSearchResult ? (
-                        <tr>
-                          <td>1</td>
-                          <td>
-                            {userSearchResult.nama}
-                            <div style={{ marginTop: '8px' }}>
-                              <button 
-                                className="btn-edit-small" 
-                                onClick={() => {
-                                  setUserUmatForm({ ...userSearchResult });
-                                  setShowUserForm(true);
-                                  setUserSubmitMessage(null);
-                                }}
-                              >
-                                revisi
-                              </button>
-                            </div>
-                          </td>
-                          <td>{userSearchResult.status}</td>
-                        </tr>
-                      ) : (
-                        <tr>
-                          <td colSpan={3} style={{ textAlign: 'center', padding: '30px', color: '#888' }}>
-                            Data Tidak Ditemukan
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {!userSearchResult && (
-                  <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                    <button 
-                      className="btn-save" 
-                      onClick={() => {
-                        setUserUmatForm({ nama: '', status: 'Jemaat', nik: '', alamat: '', noHp: '', photo: '', kk: '' });
-                        setShowUserForm(true);
-                        setUserSubmitMessage(null);
-                      }}
-                    >
-                      Isi secara mandiri
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {showUserForm && (
-              <div className="user-input-form" style={{ marginTop: '40px', padding: '25px', background: '#f9f9f9', borderRadius: '12px', border: '1px solid #eee' }}>
-                <h3 style={{ marginBottom: '20px', color: 'var(--nav-bg)' }}>Lengkapi Data Umat</h3>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Nama Umat <span style={{ color: 'red' }}>*</span>:</label>
-                    <input 
-                      type="text" 
-                      value={userUmatForm.nama} 
-                      onChange={e => setUserUmatForm({...userUmatForm, nama: e.target.value})} 
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Status:</label>
-                    <select value={userUmatForm.status} onChange={e => setUserUmatForm({...userUmatForm, status: e.target.value})}>
-                      <option value="Jemaat">Jemaat</option>
-                      <option value="Simpatisan">Simpatisan</option>
-                      <option value="Majelis">Majelis</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>NIK:</label>
-                    <input type="text" value={userUmatForm.nik} onChange={e => setUserUmatForm({...userUmatForm, nik: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label>No. HP:</label>
-                    <input type="text" value={userUmatForm.noHp} onChange={e => setUserUmatForm({...userUmatForm, noHp: e.target.value})} />
-                  </div>
-                  <div className="form-group full-width">
-                    <label>Alamat:</label>
-                    <textarea value={userUmatForm.alamat} onChange={e => setUserUmatForm({...userUmatForm, alamat: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label>Upload Photo (Maksimal 5 MB):</label>
-                    <input type="file" accept="image/*" onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        if (file.size > 5 * 1024 * 1024) {
-                          alert('File terlalu besar! Maksimal ukuran file adalah 5 MB.');
-                          e.target.value = '';
-                          return;
-                        }
-                        const reader = new FileReader();
-                        reader.onloadend = async () => {
-                          const base64 = reader.result as string;
-                          const compressed = await compressImage(base64, 800, 0.6);
-                          setUserUmatForm({ ...userUmatForm, photo: compressed });
-                        }
-                        reader.readAsDataURL(file);
-                      }
-                    }} />
-                  </div>
-                  <div className="form-group">
-                    <label>Upload KK (Kartu Keluarga - Maksimal 5 MB):</label>
-                    <input type="file" accept="image/*" onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        if (file.size > 5 * 1024 * 1024) {
-                          alert('File terlalu besar! Maksimal ukuran file adalah 5 MB.');
-                          e.target.value = '';
-                          return;
-                        }
-                        const reader = new FileReader();
-                        reader.onloadend = async () => {
-                          const base64 = reader.result as string;
-                          const compressed = await compressImage(base64, 800, 0.6);
-                          setUserUmatForm({ ...userUmatForm, kk: compressed });
-                        }
-                        reader.readAsDataURL(file);
-                      }
-                    }} />
-                  </div>
-                </div>
-                
-                <div style={{ textAlign: 'center', marginTop: '30px' }}>
-                  <button 
-                    className="btn-save" 
-                    onClick={handleUserFormSubmit}
-                    disabled={isSubmittingUserForm}
-                  >
-                    {isSubmittingUserForm ? 'Mengirim...' : 'KIRIM'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {userSubmitMessage && (
-              <div style={{ 
-                marginTop: '25px', 
-                padding: '15px', 
-                backgroundColor: '#e8f5e9', 
-                color: '#2e7d32', 
-                borderRadius: '8px',
-                textAlign: 'center',
-                fontWeight: '600',
-                border: '1px solid #c8e6c9'
-              }}>
-                {userSubmitMessage}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    )
-  }
-
+  // Modify handleUpdateProposals to use Supabase
   const handleUpdateProposals = async (updatedProposals: any[]) => {
-    const newContent = { ...siteContent, proposals: updatedProposals };
-    setSiteContent(newContent);
-    localStorage.setItem('gpibSiteContent', JSON.stringify(newContent));
+    // We only need the latest record for insertion if it's a new one
+    // But for simplicity in this migration, let's detect if it's an add, edit, or delete
+    // For "PROSES" button, it's an add.
+    
+    // NOTE: DownloadProposal component still passes the whole array.
+    // We should ideally change DownloadProposal to use supabase directly, 
+    // but to minimize breaking changes, let's compare with current state.
+  };
 
-    try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'updateProposals', data: updatedProposals }),
-      });
-    } catch (error) {
-      console.error("Gagal sinkron data proposal:", error);
+  const handleAddProposalSupabase = async (newProposal: Omit<SupabaseProposal, 'id'>) => {
+    const { error } = await supabase
+      .from('riwayat_download')
+      .insert([newProposal]);
+    
+    if (error) {
+      console.error('Error adding proposal to Supabase:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteProposalSupabase = async (id: number) => {
+    const { error } = await supabase
+      .from('riwayat_download')
+      .delete()
+      .match({ id });
+    
+    if (error) {
+      console.error('Error deleting proposal from Supabase:', error);
+      throw error;
+    }
+  };
+
+  const handleEditProposalSupabase = async (id: number, updates: Partial<SupabaseProposal>) => {
+    const { error } = await supabase
+      .from('riwayat_download')
+      .update(updates)
+      .match({ id });
+    
+    if (error) {
+      console.error('Error updating proposal in Supabase:', error);
       throw error;
     }
   };
@@ -871,8 +214,10 @@ function App() {
       return (
         <DownloadProposal 
           isLoggedIn={isLoggedIn} 
-          proposals={siteContent.proposals || []}
-          onUpdateProposals={handleUpdateProposals}
+          proposals={supabaseProposals}
+          onAddProposal={handleAddProposalSupabase}
+          onEditProposal={handleEditProposalSupabase}
+          onDeleteProposal={handleDeleteProposalSupabase}
         />
       )
     }

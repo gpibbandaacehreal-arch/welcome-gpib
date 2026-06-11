@@ -1,23 +1,26 @@
 import React, { useState } from 'react';
 import { generateProposalPDF, type ProposalData } from '../utils/pdfUtils';
+import { type SupabaseProposal } from '../services/supabase';
 
 interface ProposalRecord extends ProposalData {
-  id: string;
+  id: string | number;
   noUrut: number;
   pemohon: string;
 }
 
 interface DownloadProposalProps {
   isLoggedIn: boolean;
-  proposals: ProposalRecord[];
-  onUpdateProposals: (updated: ProposalRecord[]) => Promise<void>;
+  proposals: SupabaseProposal[];
+  onAddProposal: (newP: Omit<SupabaseProposal, 'id'>) => Promise<void>;
+  onEditProposal: (id: number, updates: Partial<SupabaseProposal>) => Promise<void>;
+  onDeleteProposal: (id: number) => Promise<void>;
 }
 
-const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposals, onUpdateProposals }) => {
+const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposals, onAddProposal, onEditProposal, onDeleteProposal }) => {
   const [tujuanSurat, setTujuanSurat] = useState('');
   const [pemohon, setPemohon] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [editTujuan, setEditTujuan] = useState('');
   const [editNomor, setEditNomor] = useState('');
   const [editPemohon, setEditPemohon] = useState('');
@@ -25,16 +28,16 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
 
   // Filter and Sort proposals
   const filteredHistory = proposals.filter(p => 
-    p.tujuanSurat.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.nomorSurat.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.tujuan_surat.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.nomor_surat.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (p.pemohon && p.pemohon.toLowerCase().includes(searchQuery.toLowerCase()))
   );
   
-  const history = [...filteredHistory].sort((a, b) => b.noUrut - a.noUrut);
+  const history = [...filteredHistory]; // Supabase already sorted by no_urut descending
 
   const getNextNoUrut = () => {
     if (proposals.length === 0) return 13;
-    const lastNo = Math.max(...proposals.map(h => h.noUrut));
+    const lastNo = Math.max(...proposals.map(h => h.no_urut));
     return lastNo + 1;
   };
 
@@ -73,76 +76,79 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
     const tanggalSurat = `${dd}/${mm}/${yyyy}`;
     const nomorSurat = generateNomorSurat(nextNo);
 
-    const newRecord: ProposalRecord = {
-      id: Date.now().toString(),
-      noUrut: nextNo,
-      nomorSurat,
-      tujuanSurat,
-      tanggalSurat,
+    const newRecord: Omit<SupabaseProposal, 'id'> = {
+      no_urut: nextNo,
+      nomor_surat: nomorSurat,
+      tujuan_surat: tujuanSurat,
+      tanggal_surat: tanggalSurat,
       pemohon,
+      link_download: '-'
     };
-
-    const updatedHistory = [...proposals, newRecord];
     
     try {
-      await onUpdateProposals(updatedHistory);
+      await onAddProposal(newRecord);
       setTujuanSurat('');
       setPemohon('');
-      alert('Proposal berhasil diproses secara global!');
+      alert('Proposal berhasil diproses secara global via Supabase!');
     } catch (err) {
-      alert('Gagal menyimpan proposal ke server.');
+      alert('Gagal menyimpan proposal ke Supabase.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleEdit = (record: ProposalRecord) => {
+  const handleEdit = (record: SupabaseProposal) => {
+    if (!record.id) return;
     setEditingId(record.id);
-    setEditTujuan(record.tujuanSurat);
-    setEditNomor(record.nomorSurat);
+    setEditTujuan(record.tujuan_surat);
+    setEditNomor(record.nomor_surat);
     setEditPemohon(record.pemohon || '');
   };
 
   const handleSaveEdit = async () => {
-    if (!editingId) return;
+    if (editingId === null) return;
     setIsProcessing(true);
-    const updatedHistory = proposals.map(h => 
-      h.id === editingId ? { ...h, tujuanSurat: editTujuan, nomorSurat: editNomor, pemohon: editPemohon } : h
-    );
     
     try {
-      await onUpdateProposals(updatedHistory);
+      await onEditProposal(editingId, { 
+        tujuan_surat: editTujuan, 
+        nomor_surat: editNomor, 
+        pemohon: editPemohon 
+      });
       setEditingId(null);
     } catch (err) {
-      alert('Gagal mengupdate proposal.');
+      alert('Gagal mengupdate proposal di Supabase.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus data ini secara permanen untuk semua orang?')) return;
+  const handleDelete = async (id?: number) => {
+    if (!id) return;
+    if (!window.confirm('Apakah Anda yakin ingin menghapus data ini secara permanen dari Supabase?')) return;
     
     setIsProcessing(true);
-    const updatedHistory = proposals.filter(h => h.id !== id);
-    
     try {
-      await onUpdateProposals(updatedHistory);
+      await onDeleteProposal(id);
     } catch (err) {
-      alert('Gagal menghapus proposal.');
+      alert('Gagal menghapus proposal di Supabase.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleDownload = async (record: ProposalRecord) => {
+  const handleDownload = async (record: SupabaseProposal) => {
     try {
-      const pdfBytes = await generateProposalPDF(record);
+      const pdfBytes = await generateProposalPDF({
+        nomorSurat: record.nomor_surat,
+        tujuanSurat: record.tujuan_surat,
+        tanggalSurat: record.tanggal_surat
+      });
       const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const safeFileName = `Proposal_${record.nomorSurat.replace(/\//g, '-')}.pdf`;
+      const safeFileName = `Proposal_${record.nomor_surat.replace(/\//g, '-')}.pdf`;
       link.download = safeFileName;
       document.body.appendChild(link);
       link.click();
