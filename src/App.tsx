@@ -162,46 +162,63 @@ function App() {
     setIsDropdownOpen(false)
   }, [activeTab])
 
-  // Fetch data on mount
-  useEffect(() => {
-    const fetchData = async () => {
-      console.log("Memulai pengambilan data...");
-      try {
-        const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`)
-        const data = await response.json()
-        console.log("Data berhasil diambil:", data);
-        if (data && (data.settings || data.pages)) {
-          // Migrasi data: ubah blocks ke content jika content belum ada
-          const migratedPages = { ...data.pages };
-          Object.keys(migratedPages).forEach(key => {
-            const page = migratedPages[key];
-            if (page && !page.content && page.blocks) {
-              page.content = page.blocks.map((b: any) => {
-                if (b.type === 'text') return `<p>${b.value.replace(/\n/g, '<br>')}</p>`;
-                if (b.type === 'image') return `<div class="content-image-wrapper"><img src="${b.value}" class="content-image" /></div>`;
-                return '';
-              }).join('');
-            }
-          });
-
-          const mergedContent = {
-            ...data,
-            pages: { ...DEFAULT_CONTENT.pages, ...migratedPages },
-            settings: { ...DEFAULT_CONTENT.settings, ...data.settings },
-            umat: data.umat || [],
-            proposals: data.proposals || []
+  // Refactor fetchData to be reusable for polling
+  const fetchData = async (isSilent = false) => {
+    if (!isSilent) console.log("Memulai pengambilan data...");
+    try {
+      const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`)
+      const data = await response.json()
+      if (!isSilent) console.log("Data berhasil diambil:", data);
+      if (data && (data.settings || data.pages)) {
+        const migratedPages = { ...data.pages };
+        Object.keys(migratedPages).forEach(key => {
+          const page = migratedPages[key];
+          if (page && !page.content && page.blocks) {
+            page.content = page.blocks.map((b: any) => {
+              if (b.type === 'text') return `<p>${b.value.replace(/\n/g, '<br>')}</p>`;
+              if (b.type === 'image') return `<div class="content-image-wrapper"><img src="${b.value}" class="content-image" /></div>`;
+              return '';
+            }).join('');
           }
-          console.log("Data umat yang dimuat (termasuk antrean):", mergedContent.umat.filter((u: UmatRecord) => u.isPending).length);
-          setSiteContent(mergedContent)
-          localStorage.setItem('gpibSiteContent', JSON.stringify(mergedContent))
+        });
+
+        const mergedContent = {
+          ...data,
+          pages: { ...DEFAULT_CONTENT.pages, ...migratedPages },
+          settings: { ...DEFAULT_CONTENT.settings, ...data.settings },
+          umat: data.umat || [],
+          proposals: (data.proposals || []).map((p: any) => ({
+            id: p.id || Date.now().toString() + Math.random(),
+            noUrut: p.noUrut || 0,
+            nomorSurat: p.nomorSurat || '-',
+            tujuanSurat: p.tujuanSurat || '-',
+            tanggalSurat: p.tanggalSurat || ''
+          }))
         }
-      } catch (error) {
-        console.error("Gagal mengambil data dari Google Drive:", error)
-      } finally {
-        setIsLoading(false)
+        
+        setSiteContent(prev => {
+          if (JSON.stringify(prev.proposals) !== JSON.stringify(mergedContent.proposals) ||
+              JSON.stringify(prev.umat) !== JSON.stringify(mergedContent.umat) ||
+              JSON.stringify(prev.pages) !== JSON.stringify(mergedContent.pages) ||
+              JSON.stringify(prev.settings) !== JSON.stringify(mergedContent.settings)) {
+            return mergedContent;
+          }
+          return prev;
+        });
+        localStorage.setItem('gpibSiteContent', JSON.stringify(mergedContent))
       }
+    } catch (error) {
+      if (!isSilent) console.error("Gagal mengambil data dari Google Drive:", error)
+    } finally {
+      if (!isSilent) setIsLoading(false)
     }
+  }
+
+  // Fetch data on mount and setup polling
+  useEffect(() => {
     fetchData()
+    const interval = setInterval(() => fetchData(true), 10000)
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {

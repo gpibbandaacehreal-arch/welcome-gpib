@@ -165,7 +165,13 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
       </div>
 
       <div className="admin-umat-list">
-        <h3>Riwayat Download Global</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h3>Riwayat Download Global</h3>
+          <span style={{ fontSize: '0.8rem', color: '#4CAF50', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ width: '8px', height: '8px', backgroundColor: '#4CAF50', borderRadius: '50%', display: 'inline-block', animation: 'pulse 2s infinite' }}></span>
+            Real-time Global Sync Aktif
+          </span>
+        </div>
         <div className="table-responsive">
           <table className="umat-table admin-table">
             <thead>
