@@ -4,6 +4,7 @@ import { generateProposalPDF, type ProposalData } from '../utils/pdfUtils';
 interface ProposalRecord extends ProposalData {
   id: string;
   noUrut: number;
+  pemohon: string;
 }
 
 interface DownloadProposalProps {
@@ -14,13 +15,22 @@ interface DownloadProposalProps {
 
 const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposals, onUpdateProposals }) => {
   const [tujuanSurat, setTujuanSurat] = useState('');
+  const [pemohon, setPemohon] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTujuan, setEditTujuan] = useState('');
   const [editNomor, setEditNomor] = useState('');
+  const [editPemohon, setEditPemohon] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Sort proposals by noUrut descending for display
-  const history = [...proposals].sort((a, b) => b.noUrut - a.noUrut);
+  // Filter and Sort proposals
+  const filteredHistory = proposals.filter(p => 
+    p.tujuanSurat.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.nomorSurat.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.pemohon && p.pemohon.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+  
+  const history = [...filteredHistory].sort((a, b) => b.noUrut - a.noUrut);
 
   const getNextNoUrut = () => {
     if (proposals.length === 0) return 13;
@@ -52,6 +62,10 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
       alert('Tujuan Proposal harus diisi.');
       return;
     }
+    if (!pemohon.trim()) {
+      alert('Nama Pemohon harus diisi.');
+      return;
+    }
 
     setIsProcessing(true);
     const nextNo = getNextNoUrut();
@@ -65,6 +79,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
       nomorSurat,
       tujuanSurat,
       tanggalSurat,
+      pemohon,
     };
 
     const updatedHistory = [...proposals, newRecord];
@@ -72,6 +87,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
     try {
       await onUpdateProposals(updatedHistory);
       setTujuanSurat('');
+      setPemohon('');
       alert('Proposal berhasil diproses secara global!');
     } catch (err) {
       alert('Gagal menyimpan proposal ke server.');
@@ -84,13 +100,14 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
     setEditingId(record.id);
     setEditTujuan(record.tujuanSurat);
     setEditNomor(record.nomorSurat);
+    setEditPemohon(record.pemohon || '');
   };
 
   const handleSaveEdit = async () => {
     if (!editingId) return;
     setIsProcessing(true);
     const updatedHistory = proposals.map(h => 
-      h.id === editingId ? { ...h, tujuanSurat: editTujuan, nomorSurat: editNomor } : h
+      h.id === editingId ? { ...h, tujuanSurat: editTujuan, nomorSurat: editNomor, pemohon: editPemohon } : h
     );
     
     try {
@@ -138,7 +155,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
 
   return (
     <div className="page-card">
-      <h2>Download Proposal</h2>
+      <h2>Download & Lacak Proposal</h2>
       
       <div className="admin-data-form" style={{ marginBottom: '30px' }}>
         <h3>Form Input Proposal (Real-time Global)</h3>
@@ -148,30 +165,52 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
             <input type="text" value={generateNomorSurat(getNextNoUrut())} disabled style={{ backgroundColor: '#f0f0f0' }} />
           </div>
           <div className="form-group">
+            <label>Nama Pemohon:</label>
+            <input 
+              type="text" 
+              value={pemohon} 
+              onChange={(e) => setPemohon(e.target.value)} 
+              placeholder="Masukkan nama Anda / Panitia..."
+            />
+          </div>
+          <div className="form-group full-width">
             <label>Tujuan Proposal:</label>
             <textarea 
               value={tujuanSurat} 
               onChange={(e) => setTujuanSurat(e.target.value)} 
-              placeholder="Masukkan tujuan proposal... (Gunakan Enter untuk baris baru)"
+              placeholder="Masukkan tujuan proposal... (Contoh: Pimpinan Bank ABC)"
               rows={3}
             />
           </div>
         </div>
         <div className="admin-action-buttons">
           <button className="btn-save" onClick={handleProses} disabled={isProcessing}>
-            {isProcessing ? 'MEMPROSES...' : 'PROSES'}
+            {isProcessing ? 'MEMPROSES...' : 'PROSES & GENERATE PDF'}
           </button>
         </div>
       </div>
 
       <div className="admin-umat-list">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h3>Riwayat Download Global</h3>
-          <span style={{ fontSize: '0.8rem', color: '#4CAF50', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ width: '8px', height: '8px', backgroundColor: '#4CAF50', borderRadius: '50%', display: 'inline-block', animation: 'pulse 2s infinite' }}></span>
-            Real-time Global Sync Aktif
-          </span>
+        <div className="history-header" style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3>Database Tracking Proposal</h3>
+            <span style={{ fontSize: '0.8rem', color: '#4CAF50', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span className="pulse-indicator" style={{ width: '8px', height: '8px', backgroundColor: '#4CAF50', borderRadius: '50%', display: 'inline-block' }}></span>
+              Database Sinkron Real-time
+            </span>
+          </div>
+          
+          <div className="search-box">
+            <input 
+              type="text" 
+              placeholder="Cari Tujuan, Nomor Surat, atau Pemohon..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+            />
+          </div>
         </div>
+
         <div className="table-responsive">
           <table className="umat-table admin-table">
             <thead>
@@ -179,6 +218,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
                 <th>No</th>
                 <th>Nomor Surat</th>
                 <th>Tujuan Surat</th>
+                <th>Pemohon</th>
                 <th>Aksi</th>
               </tr>
             </thead>
@@ -209,6 +249,16 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
                     )}
                   </td>
                   <td>
+                    {editingId === record.id ? (
+                      <input 
+                        type="text" 
+                        value={editPemohon} 
+                        onChange={(e) => setEditPemohon(e.target.value)} 
+                        className="edit-input-small"
+                      />
+                    ) : (record.pemohon || '-')}
+                  </td>
+                  <td>
                     <div className="table-actions">
                       {editingId === record.id ? (
                         <>
@@ -231,7 +281,9 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '20px' }}>Belum ada riwayat proposal global.</td>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '20px' }}>
+                    {searchQuery ? 'Data tidak ditemukan.' : 'Belum ada riwayat proposal global.'}
+                  </td>
                 </tr>
               )}
             </tbody>

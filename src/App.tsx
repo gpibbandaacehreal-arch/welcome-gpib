@@ -46,7 +46,7 @@ interface FullContent {
   proposals: any[]; // New field for shared proposal history
 }
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbycROw7gCO_xEwHmberQzMDfUf_nJIRVUuN-90o7DpSrhV1p8yZhQEqCUL9LEB_I-WF0g/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwnXm-7uc82ZXbcqLVp6wSDmhtelLbods2bHTHEjqov06jzTGf-eCXuXsDnzzGlFDBkTw/exec';
 
 const DEFAULT_CONTENT: FullContent = {
   settings: {
@@ -192,7 +192,8 @@ function App() {
             noUrut: p.noUrut || 0,
             nomorSurat: p.nomorSurat || '-',
             tujuanSurat: p.tujuanSurat || '-',
-            tanggalSurat: p.tanggalSurat || ''
+            tanggalSurat: p.tanggalSurat || '',
+            pemohon: p.pemohon || '-'
           }))
         }
         
