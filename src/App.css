@@ -347,6 +347,39 @@ h1, h2, h3 {
   border: 1px solid #ddd;
   border-radius: 6px;
   width: 100%;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: var(--transition);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-group input:focus, .form-group textarea:focus {
+  outline: none;
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+/* Table mobile enhancements */
+.table-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  .umat-table th, .umat-table td {
+    padding: 12px 8px;
+    font-size: 0.85rem;
+  }
+  
+  .btn-edit-small, .btn-delete-small, .btn-save-small {
+    padding: 8px 10px;
+    font-size: 0.7rem;
+  }
 }
 
 /* Buttons */

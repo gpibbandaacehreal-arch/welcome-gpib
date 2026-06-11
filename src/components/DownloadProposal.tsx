@@ -162,11 +162,12 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
           </div>
           <div className="form-group">
             <label>Tujuan Proposal:</label>
-            <input 
-              type="text" 
+            <textarea 
               value={tujuanSurat} 
               onChange={(e) => setTujuanSurat(e.target.value)} 
-              placeholder="Masukkan tujuan proposal..."
+              placeholder="Masukkan tujuan proposal... (Gunakan Enter untuk baris baru)"
+              rows={3}
+              className="form-textarea"
             />
           </div>
         </div>
@@ -203,13 +204,15 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
                   </td>
                   <td>
                     {editingId === record.id ? (
-                      <input 
-                        type="text" 
+                      <textarea 
                         value={editTujuan} 
                         onChange={(e) => setEditTujuan(e.target.value)} 
                         className="edit-input-small"
+                        rows={2}
                       />
-                    ) : record.tujuanSurat}
+                    ) : (
+                      <div style={{ whiteSpace: 'pre-wrap' }}>{record.tujuanSurat}</div>
+                    )}
                   </td>
                   <td>
                     <div className="table-actions">
