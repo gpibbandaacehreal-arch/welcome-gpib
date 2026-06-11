@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { generateProposalPDF, type ProposalData } from '../utils/pdfUtils';
 
 interface ProposalRecord extends ProposalData {
