@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateProposalPDF, type ProposalData } from '../utils/pdfUtils';
 
 interface ProposalRecord extends ProposalData {
@@ -8,41 +8,25 @@ interface ProposalRecord extends ProposalData {
 
 interface DownloadProposalProps {
   isLoggedIn: boolean;
+  proposals: ProposalRecord[];
+  onUpdateProposals: (updated: ProposalRecord[]) => Promise<void>;
 }
 
-const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
+const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposals, onUpdateProposals }) => {
   const [tujuanSurat, setTujuanSurat] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTujuan, setEditTujuan] = useState('');
   const [editNomor, setEditNomor] = useState('');
-  
-  const [history, setHistory] = useState<ProposalRecord[]>(() => {
-    const saved = localStorage.getItem('proposalHistory');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
-  });
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const [nextNoUrut, setNextNoUrut] = useState<number>(() => {
-    const saved = localStorage.getItem('proposalHistory');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.length > 0) {
-          const lastNo = Math.max(...parsed.map((h: ProposalRecord) => h.noUrut));
-          return lastNo + 1;
-        }
-      } catch (e) {
-        return 13;
-      }
-    }
-    return 13;
-  });
+  // Sort proposals by noUrut descending for display
+  const history = [...proposals].sort((a, b) => b.noUrut - a.noUrut);
+
+  const getNextNoUrut = () => {
+    if (proposals.length === 0) return 13;
+    const lastNo = Math.max(...proposals.map(h => h.noUrut));
+    return lastNo + 1;
+  };
 
   const getCurrentDateInfo = () => {
     const now = new Date();
@@ -63,30 +47,37 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
     return `${noUrut}/${mmRoman}-‘${yyShort}/MJ-BA/PPSGGR30-1`;
   };
 
-  const handleProses = () => {
+  const handleProses = async () => {
     if (!tujuanSurat.trim()) {
       alert('Tujuan Proposal harus diisi.');
       return;
     }
 
+    setIsProcessing(true);
+    const nextNo = getNextNoUrut();
     const { dd, mm, yyyy } = getCurrentDateInfo();
     const tanggalSurat = `${dd}/${mm}/${yyyy}`;
-    const nomorSurat = generateNomorSurat(nextNoUrut);
+    const nomorSurat = generateNomorSurat(nextNo);
 
     const newRecord: ProposalRecord = {
       id: Date.now().toString(),
-      noUrut: nextNoUrut,
+      noUrut: nextNo,
       nomorSurat,
       tujuanSurat,
       tanggalSurat,
     };
 
-    const updatedHistory = [newRecord, ...history];
-    setHistory(updatedHistory);
-    setNextNoUrut(nextNoUrut + 1);
-    setTujuanSurat('');
-
-    localStorage.setItem('proposalHistory', JSON.stringify(updatedHistory));
+    const updatedHistory = [...proposals, newRecord];
+    
+    try {
+      await onUpdateProposals(updatedHistory);
+      setTujuanSurat('');
+      alert('Proposal berhasil diproses secara global!');
+    } catch (err) {
+      alert('Gagal menyimpan proposal ke server.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleEdit = (record: ProposalRecord) => {
@@ -95,57 +86,53 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
     setEditNomor(record.nomorSurat);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingId) return;
-    const updatedHistory = history.map(h => 
+    setIsProcessing(true);
+    const updatedHistory = proposals.map(h => 
       h.id === editingId ? { ...h, tujuanSurat: editTujuan, nomorSurat: editNomor } : h
     );
-    setHistory(updatedHistory);
-    localStorage.setItem('proposalHistory', JSON.stringify(updatedHistory));
-    setEditingId(null);
+    
+    try {
+      await onUpdateProposals(updatedHistory);
+      setEditingId(null);
+    } catch (err) {
+      alert('Gagal mengupdate proposal.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus data ini?')) return;
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus data ini secara permanen untuk semua orang?')) return;
     
-    const updatedHistory = history.filter(h => h.id !== id);
-    setHistory(updatedHistory);
-    localStorage.setItem('proposalHistory', JSON.stringify(updatedHistory));
-
-    // Reset nextNoUrut if history is empty or if we deleted the highest number
-    if (updatedHistory.length === 0) {
-      setNextNoUrut(13);
-    } else {
-      const lastNo = Math.max(...updatedHistory.map(h => h.noUrut));
-      setNextNoUrut(lastNo + 1);
+    setIsProcessing(true);
+    const updatedHistory = proposals.filter(h => h.id !== id);
+    
+    try {
+      await onUpdateProposals(updatedHistory);
+    } catch (err) {
+      alert('Gagal menghapus proposal.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleDownload = async (record: ProposalRecord) => {
     try {
-      console.log('Memulai proses download untuk:', record);
       const pdfBytes = await generateProposalPDF(record);
-      console.log('PDF berhasil di-generate, ukuran:', pdfBytes.length, 'bytes');
-      
       const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      
-      // Clean up filename for the link
       const safeFileName = `Proposal_${record.nomorSurat.replace(/\//g, '-')}.pdf`;
       link.download = safeFileName;
-      
-      console.log('Memicu download browser:', safeFileName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
-      // Revoke the object URL after a short delay to ensure the browser has started the download
       setTimeout(() => URL.revokeObjectURL(url), 100);
     } catch (err: any) {
-      console.error('Detail Error Download:', err);
-      alert(`Gagal mendownload PDF: ${err.message || 'Error tidak diketahui'}. \n\nPastikan file COVER.pdf dan ISI.pdf (HURUF BESAR) sudah ada di folder public/`);
+      alert(`Gagal mendownload PDF: ${err.message || 'Error tidak diketahui'}`);
     }
   };
 
@@ -154,11 +141,11 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
       <h2>Download Proposal</h2>
       
       <div className="admin-data-form" style={{ marginBottom: '30px' }}>
-        <h3>Form Input Proposal</h3>
+        <h3>Form Input Proposal (Real-time Global)</h3>
         <div className="form-grid">
           <div className="form-group">
-            <label>Nomor Surat (Otomatis):</label>
-            <input type="text" value={generateNomorSurat(nextNoUrut)} disabled style={{ backgroundColor: '#f0f0f0' }} />
+            <label>Nomor Surat Selanjutnya (Otomatis):</label>
+            <input type="text" value={generateNomorSurat(getNextNoUrut())} disabled style={{ backgroundColor: '#f0f0f0' }} />
           </div>
           <div className="form-group">
             <label>Tujuan Proposal:</label>
@@ -167,17 +154,18 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
               onChange={(e) => setTujuanSurat(e.target.value)} 
               placeholder="Masukkan tujuan proposal... (Gunakan Enter untuk baris baru)"
               rows={3}
-              className="form-textarea"
             />
           </div>
         </div>
         <div className="admin-action-buttons">
-          <button className="btn-save" onClick={handleProses}>PROSES</button>
+          <button className="btn-save" onClick={handleProses} disabled={isProcessing}>
+            {isProcessing ? 'MEMPROSES...' : 'PROSES'}
+          </button>
         </div>
       </div>
 
       <div className="admin-umat-list">
-        <h3>Riwayat Download</h3>
+        <h3>Riwayat Download Global</h3>
         <div className="table-responsive">
           <table className="umat-table admin-table">
             <thead>
@@ -218,7 +206,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
                     <div className="table-actions">
                       {editingId === record.id ? (
                         <>
-                          <button className="btn-save-small" onClick={handleSaveEdit}>Simpan</button>
+                          <button className="btn-save-small" onClick={handleSaveEdit} disabled={isProcessing}>Simpan</button>
                           <button className="btn-delete-small" onClick={() => setEditingId(null)}>Batal</button>
                         </>
                       ) : (
@@ -237,7 +225,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn }) => {
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '20px' }}>Belum ada riwayat proposal.</td>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '20px' }}>Belum ada riwayat proposal global.</td>
                 </tr>
               )}
             </tbody>

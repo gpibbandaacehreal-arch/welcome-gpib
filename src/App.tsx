@@ -43,6 +43,7 @@ interface FullContent {
   settings: SiteSettings;
   pages: Record<string, PageContent>;
   umat: UmatRecord[];
+  proposals: any[]; // New field for shared proposal history
 }
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbycROw7gCO_xEwHmberQzMDfUf_nJIRVUuN-90o7DpSrhV1p8yZhQEqCUL9LEB_I-WF0g/exec';
@@ -98,7 +99,8 @@ const DEFAULT_CONTENT: FullContent = {
       content: '<p><strong>Tugas Pokok:</strong><br>Mengelola sistem informasi, komunikasi publik, tata organisasi, serta melakukan penelitian dan pengembangan jemaat.</p><p><strong>Fungsi:</strong><br>1. Mengelola media komunikasi gereja (website, media sosial, warta jemaat).<br>2. Melakukan pendataan dan pengolahan data umat secara digital.<br>3. Melakukan kajian dan evaluasi program kerja untuk pengembangan kualitas jemaat ke depan.</p>'
     }
   },
-  umat: []
+  umat: [],
+  proposals: []
 };
 
 function App() {
@@ -118,7 +120,8 @@ function App() {
         return {
           ...DEFAULT_CONTENT,
           ...parsed,
-          pages: { ...DEFAULT_CONTENT.pages, ...parsed.pages }
+          pages: { ...DEFAULT_CONTENT.pages, ...parsed.pages },
+          proposals: parsed.proposals || []
         }
       } catch (e) {
         return DEFAULT_CONTENT
@@ -185,7 +188,8 @@ function App() {
             ...data,
             pages: { ...DEFAULT_CONTENT.pages, ...migratedPages },
             settings: { ...DEFAULT_CONTENT.settings, ...data.settings },
-            umat: data.umat || []
+            umat: data.umat || [],
+            proposals: data.proposals || []
           }
           console.log("Data umat yang dimuat (termasuk antrean):", mergedContent.umat.filter((u: UmatRecord) => u.isPending).length);
           setSiteContent(mergedContent)
@@ -813,6 +817,24 @@ function App() {
     )
   }
 
+  const handleUpdateProposals = async (updatedProposals: any[]) => {
+    const newContent = { ...siteContent, proposals: updatedProposals };
+    setSiteContent(newContent);
+    localStorage.setItem('gpibSiteContent', JSON.stringify(newContent));
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'updateProposals', data: updatedProposals }),
+      });
+    } catch (error) {
+      console.error("Gagal sinkron data proposal:", error);
+      throw error;
+    }
+  };
+
   const renderPage = () => {
     if (activeTab === 'Login' && !isLoggedIn) {
       return (
@@ -828,7 +850,13 @@ function App() {
     }
 
     if (activeTab === 'Download') {
-      return <DownloadProposal isLoggedIn={isLoggedIn} />
+      return (
+        <DownloadProposal 
+          isLoggedIn={isLoggedIn} 
+          proposals={siteContent.proposals || []}
+          onUpdateProposals={handleUpdateProposals}
+        />
+      )
     }
 
     const currentPage = siteContent.pages[activeTab]
