@@ -122,6 +122,7 @@ function App() {
 
   // Fetch proposals from Supabase
   const fetchSupabaseProposals = async () => {
+    console.log('Fetching proposals from Supabase...');
     const { data, error } = await supabase
       .from('riwayat_download')
       .select('*')
@@ -130,22 +131,28 @@ function App() {
     if (error) {
       console.error('Error fetching proposals from Supabase:', error);
     } else if (data) {
+      console.log('Successfully fetched proposals:', data.length, 'records');
       setSupabaseProposals(data);
     }
   };
 
   // Subscribe to real-time changes
   useEffect(() => {
+    console.log('Setting up Supabase real-time channel...');
     fetchSupabaseProposals();
 
     const channel = supabase
       .channel('public:riwayat_download')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'riwayat_download' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'riwayat_download' }, (payload) => {
+        console.log('Real-time change detected!', payload);
         fetchSupabaseProposals();
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Supabase subscription status:', status);
+      });
 
     return () => {
+      console.log('Cleaning up Supabase channel');
       supabase.removeChannel(channel);
     };
   }, []);
