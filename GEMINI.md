@@ -7,13 +7,15 @@ Aplikasi web untuk informasi jemaat GPIB Banda Aceh, dibangun menggunakan React 
 - **Frontend:** Menggunakan React 19 dan Vite 8.
 - **Fitur Utama:**
   - Landing page dengan informasi jadwal ibadah dan organisasi.
-  - Sistem login Admin (kredensial saat ini: `adminGPIB` / `admin`).
+  - Sistem login Admin menggunakan **Supabase Auth**.
   - Dashboard Admin untuk mengedit konten halaman secara langsung.
-  - Integrasi dengan Google Apps Script (`SCRIPT_URL`) untuk penyimpanan data (konten & data umat).
+  - Integrasi dengan **Supabase** untuk tracking riwayat download proposal (real-time).
+  - Integrasi dengan Google Apps Script (`SCRIPT_URL`) untuk penyimpanan konten halaman dan data umat.
 - **Struktur File:**
-  - `src/components/`: Berisi komponen UI seperti `LoginForm`, `AdminDashboard`, dll.
-  - `src/services/auth.ts`: Logika autentikasi (saat ini masih hardcoded).
-  - `src/App.tsx`: Komponen utama yang mengatur routing dan state aplikasi.
+  - `src/components/`: Berisi komponen UI seperti `LoginForm`, `AdminDashboard`, `DownloadProposal`, dll.
+  - `src/services/auth.ts`: Logika autentikasi menggunakan Supabase.
+  - `src/services/supabase.ts`: Konfigurasi dan klien Supabase.
+  - `src/App.tsx`: Komponen utama yang mengatur routing, state aplikasi, dan polling data.
 
 ## Panduan Pengembangan
 - Pastikan perubahan disinkronkan ke Google Drive melalui API yang tersedia.
