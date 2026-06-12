@@ -34,13 +34,30 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
     try {
       const { data, error } = await supabase.rpc('get_next_nomor_surat');
       if (error) {
-        console.error('Error fetching next nomor surat:', error);
+        console.error('Error fetching next nomor surat from RPC:', error);
+        // Fallback logic if RPC fails
+        generateFallbackNomor();
       } else if (data) {
         setNextNomorSurat(data);
+      } else {
+        generateFallbackNomor();
       }
     } catch (err) {
       console.error('Error in fetchNextNomorSurat:', err);
+      generateFallbackNomor();
     }
+  };
+
+  const generateFallbackNomor = () => {
+    const nextNo = proposals.length > 0 ? Math.max(...proposals.map(p => p.no_urut)) + 1 : 13;
+    const now = new Date();
+    const mm = now.getMonth() + 1;
+    const yyyy = now.getFullYear();
+    const yyShort = String(yyyy).slice(-2);
+    const romanMonths = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+    const mmRoman = romanMonths[mm - 1];
+    const generated = `${nextNo}/${mmRoman}-‘${yyShort}/MJ-BA/PPSGGR30-1`;
+    setNextNomorSurat(generated);
   };
 
   useEffect(() => {

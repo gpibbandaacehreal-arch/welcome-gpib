@@ -167,11 +167,14 @@ function App() {
 
   // Refactor fetchData to be reusable for polling
   const fetchData = async (isSilent = false) => {
-    if (!isSilent) console.log("Memulai pengambilan data...");
+    if (!isSilent) console.log("Memulai pengambilan data dari Google Drive...");
     try {
       const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`)
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
       const data = await response.json()
-      if (!isSilent) console.log("Data berhasil diambil:", data);
+      if (!isSilent) console.log("Data berhasil diambil dari Drive:", data);
+      
       if (data && (data.settings || data.pages)) {
         const migratedPages = { ...data.pages };
         Object.keys(migratedPages).forEach(key => {
@@ -185,31 +188,27 @@ function App() {
           }
         });
 
+        // SAFETY: Only update if the incoming data actually contains records
+        // This prevents overwriting with empty arrays if the script fails to fetch records
         const mergedContent = {
-          ...data,
-          pages: { ...DEFAULT_CONTENT.pages, ...migratedPages },
-          settings: { ...DEFAULT_CONTENT.settings, ...data.settings },
-          umat: data.umat || [],
-          proposals: (data.proposals || []).map((p: any) => ({
-            id: p.id || Date.now().toString() + Math.random(),
-            noUrut: p.noUrut || 0,
-            nomorSurat: p.nomorSurat || '-',
-            tujuanSurat: p.tujuanSurat || '-',
-            tanggalSurat: p.tanggalSurat || '',
-            pemohon: p.pemohon || '-'
-          }))
+          ...siteContent, // Start with current content
+          settings: data.settings ? { ...DEFAULT_CONTENT.settings, ...data.settings } : siteContent.settings,
+          pages: data.pages ? { ...DEFAULT_CONTENT.pages, ...migratedPages } : siteContent.pages,
+          umat: (data.umat && data.umat.length > 0) ? data.umat : siteContent.umat
         }
         
         setSiteContent(prev => {
-          if (JSON.stringify(prev.proposals) !== JSON.stringify(mergedContent.proposals) ||
-              JSON.stringify(prev.umat) !== JSON.stringify(mergedContent.umat) ||
-              JSON.stringify(prev.pages) !== JSON.stringify(mergedContent.pages) ||
-              JSON.stringify(prev.settings) !== JSON.stringify(mergedContent.settings)) {
+          const isSameUmat = JSON.stringify(prev.umat) === JSON.stringify(mergedContent.umat);
+          const isSamePages = JSON.stringify(prev.pages) === JSON.stringify(mergedContent.pages);
+          const isSameSettings = JSON.stringify(prev.settings) === JSON.stringify(mergedContent.settings);
+          
+          if (!isSameUmat || !isSamePages || !isSameSettings) {
+            if (!isSilent) console.log("Mendapatkan data baru, memperbarui state...");
+            localStorage.setItem('gpibSiteContent', JSON.stringify(mergedContent));
             return mergedContent;
           }
           return prev;
         });
-        localStorage.setItem('gpibSiteContent', JSON.stringify(mergedContent))
       }
     } catch (error) {
       if (!isSilent) console.error("Gagal mengambil data dari Google Drive:", error)
@@ -221,22 +220,30 @@ function App() {
   // Fetch data on mount and setup polling
   useEffect(() => {
     fetchData()
-    const interval = setInterval(() => fetchData(true), 10000)
+    const interval = setInterval(() => fetchData(true), 15000) // Increased interval slightly
     return () => clearInterval(interval)
   }, [])
 
   const fetchSupabaseProposals = async () => {
-    console.log('Fetching proposals from Supabase...');
-    const { data, error } = await supabase
-      .from('riwayat_download')
-      .select('*')
-      .order('no_urut', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching proposals from Supabase:', error);
-    } else if (data) {
-      console.log('Successfully fetched proposals:', data.length, 'records');
-      setSupabaseProposals(data);
+    console.log('Memulai fetch proposal dari Supabase...');
+    try {
+      const { data, error } = await supabase
+        .from('riwayat_download')
+        .select('*')
+        .order('no_urut', { ascending: false });
+      
+      if (error) {
+        console.error('Error Supabase fetch:', error.message);
+        // If it's a 404 or table not found, we should probably warn the user
+        if (error.code === 'PGRST116' || error.message.includes('not found')) {
+          console.error('PENTING: Tabel riwayat_download belum dibuat di Supabase!');
+        }
+      } else if (data) {
+        console.log('Berhasil fetch Supabase:', data.length, 'data ditemukan');
+        setSupabaseProposals(data);
+      }
+    } catch (err) {
+      console.error('Exception saat fetch Supabase:', err);
     }
   };
 
