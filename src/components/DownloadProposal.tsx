@@ -1,17 +1,11 @@
-import React, { useState } from 'react';
-import { generateProposalPDF, type ProposalData } from '../utils/pdfUtils';
-import { type SupabaseProposal } from '../services/supabase';
-
-interface ProposalRecord extends ProposalData {
-  id: string | number;
-  noUrut: number;
-  pemohon: string;
-}
+import React, { useState, useEffect } from 'react';
+import { generateProposalPDF } from '../utils/pdfUtils';
+import { supabase, type SupabaseProposal } from '../services/supabase';
 
 interface DownloadProposalProps {
   isLoggedIn: boolean;
   proposals: SupabaseProposal[];
-  onAddProposal: (newP: Omit<SupabaseProposal, 'id'>) => Promise<void>;
+  onAddProposal: (pemohon: string, tujuanSurat: string) => Promise<any>;
   onEditProposal: (id: number, updates: Partial<SupabaseProposal>) => Promise<void>;
   onDeleteProposal: (id: number) => Promise<void>;
 }
@@ -25,6 +19,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
   const [editNomor, setEditNomor] = useState('');
   const [editPemohon, setEditPemohon] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [nextNomorSurat, setNextNomorSurat] = useState<string>('Memuat...');
 
   // Filter and Sort proposals
   const filteredHistory = proposals.filter(p => 
@@ -35,30 +30,24 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
   
   const history = [...filteredHistory]; // Supabase already sorted by no_urut descending
 
-  const getNextNoUrut = () => {
-    if (proposals.length === 0) return 13;
-    const lastNo = Math.max(...proposals.map(h => h.no_urut));
-    return lastNo + 1;
+  const fetchNextNomorSurat = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_next_nomor_surat');
+      if (error) {
+        console.error('Error fetching next nomor surat:', error);
+      } else if (data) {
+        setNextNomorSurat(data);
+      }
+    } catch (err) {
+      console.error('Error in fetchNextNomorSurat:', err);
+    }
   };
 
-  const getCurrentDateInfo = () => {
-    const now = new Date();
-    const dd = String(now.getDate()).padStart(2, '0');
-    const mm = now.getMonth() + 1; // numeric month
-    const yyyy = now.getFullYear();
-    const yyShort = String(yyyy).slice(-2);
-    
-    // Convert to Roman Numeral
-    const romanMonths = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
-    const mmRoman = romanMonths[mm - 1];
-    
-    return { dd, mm: String(mm).padStart(2, '0'), mmRoman, yyyy, yyShort };
-  };
-
-  const generateNomorSurat = (noUrut: number) => {
-    const { mmRoman, yyShort } = getCurrentDateInfo();
-    return `${noUrut}/${mmRoman}-‘${yyShort}/MJ-BA/PPSGGR30-1`;
-  };
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchNextNomorSurat();
+    }
+  }, [isLoggedIn, proposals]);
 
   const handleProses = async () => {
     if (!tujuanSurat.trim()) {
@@ -71,27 +60,20 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
     }
 
     setIsProcessing(true);
-    const nextNo = getNextNoUrut();
-    const { dd, mm, yyyy } = getCurrentDateInfo();
-    const tanggalSurat = `${dd}/${mm}/${yyyy}`;
-    const nomorSurat = generateNomorSurat(nextNo);
-
-    const newRecord: Omit<SupabaseProposal, 'id'> = {
-      no_urut: nextNo,
-      nomor_surat: nomorSurat,
-      tujuan_surat: tujuanSurat,
-      tanggal_surat: tanggalSurat,
-      pemohon,
-      link_download: '-'
-    };
     
     try {
-      await onAddProposal(newRecord);
+      const insertedRows = await onAddProposal(pemohon, tujuanSurat);
       setTujuanSurat('');
       setPemohon('');
       alert('Proposal berhasil diproses secara global via Supabase!');
-    } catch (err) {
-      alert('Gagal menyimpan proposal ke Supabase.');
+      
+      // Auto download PDF for the newly created record
+      if (insertedRows && insertedRows.length > 0) {
+        handleDownload(insertedRows[0]);
+      }
+    } catch (err: any) {
+      console.error('ERROR SUPABASE:', err);
+      alert(err?.message || JSON.stringify(err));
     } finally {
       setIsProcessing(false);
     }
@@ -163,38 +145,40 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
     <div className="page-card">
       <h2>Download & Lacak Proposal</h2>
       
-      <div className="admin-data-form" style={{ marginBottom: '30px' }}>
-        <h3>Form Input Proposal (Real-time Global)</h3>
-        <div className="form-grid">
-          <div className="form-group">
-            <label>Nomor Surat Selanjutnya (Otomatis):</label>
-            <input type="text" value={generateNomorSurat(getNextNoUrut())} disabled style={{ backgroundColor: '#f0f0f0' }} />
+      {isLoggedIn && (
+        <div className="admin-data-form" style={{ marginBottom: '30px' }}>
+          <h3>Form Input Proposal (Real-time Global)</h3>
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Nomor Surat Selanjutnya (Otomatis):</label>
+              <input type="text" value={nextNomorSurat} disabled style={{ backgroundColor: '#f0f0f0' }} />
+            </div>
+            <div className="form-group">
+              <label>Nama Pemohon:</label>
+              <input 
+                type="text" 
+                value={pemohon} 
+                onChange={(e) => setPemohon(e.target.value)} 
+                placeholder="Masukkan nama Anda / Panitia..."
+              />
+            </div>
+            <div className="form-group full-width">
+              <label>Tujuan Proposal:</label>
+              <textarea 
+                value={tujuanSurat} 
+                onChange={(e) => setTujuanSurat(e.target.value)} 
+                placeholder="Masukkan tujuan proposal... (Contoh: Pimpinan Bank ABC)"
+                rows={3}
+              />
+            </div>
           </div>
-          <div className="form-group">
-            <label>Nama Pemohon:</label>
-            <input 
-              type="text" 
-              value={pemohon} 
-              onChange={(e) => setPemohon(e.target.value)} 
-              placeholder="Masukkan nama Anda / Panitia..."
-            />
-          </div>
-          <div className="form-group full-width">
-            <label>Tujuan Proposal:</label>
-            <textarea 
-              value={tujuanSurat} 
-              onChange={(e) => setTujuanSurat(e.target.value)} 
-              placeholder="Masukkan tujuan proposal... (Contoh: Pimpinan Bank ABC)"
-              rows={3}
-            />
+          <div className="admin-action-buttons">
+            <button className="btn-save" onClick={handleProses} disabled={isProcessing}>
+              {isProcessing ? 'MEMPROSES...' : 'PROSES & GENERATE PDF'}
+            </button>
           </div>
         </div>
-        <div className="admin-action-buttons">
-          <button className="btn-save" onClick={handleProses} disabled={isProcessing}>
-            {isProcessing ? 'MEMPROSES...' : 'PROSES & GENERATE PDF'}
-          </button>
-        </div>
-      </div>
+      )}
 
       <div className="admin-umat-list">
         <div className="history-header" style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px' }}>
@@ -240,7 +224,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
                         onChange={(e) => setEditNomor(e.target.value)} 
                         className="edit-input-small"
                       />
-                    ) : record.nomorSurat}
+                    ) : record.nomor_surat}
                   </td>
                   <td>
                     {editingId === record.id ? (
@@ -251,7 +235,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
                         rows={2}
                       />
                     ) : (
-                      <div style={{ whiteSpace: 'pre-wrap' }}>{record.tujuanSurat}</div>
+                      <div style={{ whiteSpace: 'pre-wrap' }}>{record.tujuan_surat}</div>
                     )}
                   </td>
                   <td>

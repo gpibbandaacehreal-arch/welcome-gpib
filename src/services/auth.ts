@@ -1,3 +1,4 @@
+import { supabase } from './supabase';
 
 export interface AuthResponse {
   success: boolean;
@@ -7,27 +8,43 @@ export interface AuthResponse {
 
 export const authService = {
   login: async (username: string, password: string): Promise<AuthResponse> => {
-    // Simulasi delay jaringan
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Kredensial hardcoded (bisa dipindah ke env atau backend nantinya)
-    if (username === 'adminGPIB' && password === 'admin') {
+    try {
+      // Map adminGPIB to admin@gpib.org for Supabase auth
+      const email = username === 'adminGPIB' ? 'admin@gpib.org' : username;
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        return {
+          success: false,
+          message: 'Username atau Password salah. Silakan coba lagi.'
+        };
+      }
+
       localStorage.setItem('isGPBAdmin', 'true');
-      const token = 'session_' + Math.random().toString(36).substr(2);
-      localStorage.setItem('adminToken', token);
+      localStorage.setItem('adminToken', data.session?.access_token || 'true');
       return { 
         success: true, 
-        token: token 
+        token: data.session?.access_token 
+      };
+    } catch (err) {
+      console.error(err);
+      return { 
+        success: false, 
+        message: 'Gagal menghubungkan ke server. Periksa koneksi internet Anda.' 
       };
     }
-    
-    return { 
-      success: false, 
-      message: 'Username atau Password salah. Silakan coba lagi.' 
-    };
   },
   
-  logout: () => {
+  logout: async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error(err);
+    }
     localStorage.removeItem('isGPBAdmin');
     localStorage.removeItem('adminToken');
   },
