@@ -20,6 +20,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 
     try {
       const response = await authService.login(username, password);
+      
       if (response.success) {
         onLoginSuccess();
       } else {
@@ -36,6 +37,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   return (
     <div className="login-container">
       <h2>Login Admin</h2>
+      
       {error && (
         <div style={{ 
           backgroundColor: '#ffebee', 
@@ -50,6 +52,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           {error}
         </div>
       )}
+
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <input 
@@ -63,7 +66,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           />
         </div>
         
-        <div className="password-input-wrapper">
+        <div className="password-input-wrapper" style={{ position: 'relative' }}>
           <input 
             type={showPassword ? "text" : "password"} 
             placeholder="Password" 
@@ -72,11 +75,29 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
             disabled={isLoading}
             required 
             autoComplete="current-password"
+            style={{ width: '100%', paddingRight: '45px' }}
           />
           <button 
             type="button" 
             className="toggle-password-btn"
             onClick={() => setShowPassword(!showPassword)}
+            style={{
+              position: 'absolute',
+              right: '10px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '5px',
+              fontSize: '1.2rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 2,
+              width: 'auto',
+              marginTop: 0
+            }}
             title={showPassword ? "Sembunyikan Password" : "Tampilkan Password"}
             disabled={isLoading}
           >
@@ -84,7 +105,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           </button>
         </div>
         
-        <button type="submit" disabled={isLoading}>
+        <button type="submit" disabled={isLoading} style={{ width: '100%', marginTop: '10px' }}>
           {isLoading ? (
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               <span className="loader-small"></span> Memproses...

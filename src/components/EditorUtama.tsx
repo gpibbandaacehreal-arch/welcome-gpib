@@ -9,9 +9,10 @@ interface EditorUtamaProps {
   setTitle: (title: string) => void;
   content: string;
   setContent: (content: string) => void;
+  berandaPdf?: string;
 }
 
-const EditorUtama: React.FC<EditorUtamaProps> = ({ title, setTitle, content, setContent }) => {
+const EditorUtama: React.FC<EditorUtamaProps> = ({ title, setTitle, content, setContent, berandaPdf }) => {
   const quillRef = useRef<ReactQuill>(null);
 
   const imageHandler = () => {
@@ -28,7 +29,7 @@ const EditorUtama: React.FC<EditorUtamaProps> = ({ title, setTitle, content, set
           const base64 = reader.result as string;
           // Kompres gambar sebelum dimasukkan ke editor
           const compressed = await compressImage(base64, 800, 0.7);
-          
+
           const quill = quillRef.current?.getEditor();
           if (quill) {
             const range = quill.getSelection();
@@ -75,6 +76,31 @@ const EditorUtama: React.FC<EditorUtamaProps> = ({ title, setTitle, content, set
           placeholder="Tulis materi di sini..."
         />
       </div>
+
+      {berandaPdf && (
+        <div className="admin-pdf-preview" style={{ marginTop: '30px', padding: '20px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
+          <h4>Preview PDF (Warta Jemaat):</h4>
+          <iframe 
+            src={berandaPdf} 
+            width="100%" 
+            height="400px" 
+            style={{ border: '1px solid #ccc', borderRadius: '4px' }}
+            title="Admin PDF Preview"
+          ></iframe>
+          <div style={{ marginTop: '15px' }}>
+            <a 
+              href={berandaPdf} 
+              download="Warta_Jemaat_GPIB.pdf" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="btn-save"
+              style={{ textDecoration: 'none', display: 'inline-block' }}
+            >
+              Download PDF (Admin)
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

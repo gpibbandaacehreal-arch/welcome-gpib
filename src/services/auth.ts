@@ -9,18 +9,18 @@ export interface AuthResponse {
 export const authService = {
   login: async (username: string, password: string): Promise<AuthResponse> => {
     try {
-      // Map adminGPIB to admin@gpib.org for Supabase auth
-      const email = username === 'adminGPIB' ? 'admin@gpib.org' : username;
+      // Supabase uses email/password. We'll map username to a fake email format
+      const email = `${username}@gpib.org`;
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       });
 
       if (error) {
-        return {
-          success: false,
-          message: 'Username atau Password salah. Silakan coba lagi.'
+        return { 
+          success: false, 
+          message: 'Username atau Password salah.' 
         };
       }
 

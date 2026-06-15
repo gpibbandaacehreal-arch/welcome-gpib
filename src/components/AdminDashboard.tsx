@@ -8,6 +8,7 @@ interface AdminDashboardProps {
   initialContent: string;
   initialSiteTitle: string;
   initialSiteLogo: string;
+  initialBerandaPdf: string;
   onSave: (data: any) => void;
   onPublish: (data: any) => void;
   isSaving: boolean;
@@ -15,13 +16,14 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
   initialTitle, initialContent, 
-  initialSiteTitle, initialSiteLogo,
+  initialSiteTitle, initialSiteLogo, initialBerandaPdf,
   onSave, onPublish, isSaving
 }) => {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
   const [siteTitle, setSiteTitle] = useState(initialSiteTitle);
   const [siteLogo, setSiteLogo] = useState(initialSiteLogo);
+  const [berandaPdf, setBerandaPdf] = useState(initialBerandaPdf);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   // Sidebar states
@@ -36,14 +38,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setContent(initialContent);
     setSiteTitle(initialSiteTitle);
     setSiteLogo(initialSiteLogo);
-  }, [initialTitle, initialContent, initialSiteTitle, initialSiteLogo]);
+    setBerandaPdf(initialBerandaPdf);
+  }, [initialTitle, initialContent, initialSiteTitle, initialSiteLogo, initialBerandaPdf]);
 
   const handlePublish = () => {
-    onPublish({ title, content, label, jadwal, tautan, komentar, siteTitle, siteLogo });
+    onPublish({ title, content, label, jadwal, tautan, komentar, siteTitle, siteLogo, berandaPdf });
   };
 
   const handlePreview = () => {
-    onSave({ title, content, label, jadwal, tautan, komentar, siteTitle, siteLogo });
+    onSave({ title, content, label, jadwal, tautan, komentar, siteTitle, siteLogo, berandaPdf });
   };
 
   return (
@@ -55,6 +58,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             setTitle={setTitle} 
             content={content} 
             setContent={setContent} 
+            berandaPdf={berandaPdf}
           />
         </div>
         
@@ -70,6 +74,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               komentar={komentar} setKomentar={setKomentar}
               siteTitle={siteTitle} setSiteTitle={setSiteTitle}
               siteLogo={siteLogo} setSiteLogo={setSiteLogo}
+              berandaPdf={berandaPdf} setBerandaPdf={setBerandaPdf}
             />
           </div>
         </div>

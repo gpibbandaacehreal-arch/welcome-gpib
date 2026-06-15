@@ -27,6 +27,7 @@ interface PageContent {
 interface SiteSettings {
   logo: string;
   title: string;
+  berandaPdf?: string;
 }
 
 interface UmatRecord {
@@ -53,7 +54,8 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwnXm-7uc82ZXbcqLVp6
 const DEFAULT_CONTENT: FullContent = {
   settings: {
     logo: "/LOGO_GPIB.jpg",
-    title: "GPIB BANDA ACEH"
+    title: "GPIB BANDA ACEH",
+    berandaPdf: ""
   },
   pages: {
     'Beranda': {
@@ -140,7 +142,9 @@ function App() {
   const [editContent, setEditContent] = useState('')
   const [editLogo, setEditLogo] = useState('')
   const [editSiteTitle, setEditSiteTitle] = useState('')
+  const [editBerandaPdf, setEditBerandaPdf] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [showPdfReader, setShowPdfReader] = useState(false)
 
   // Data Umat States
   const [userSearch, setUserSearch] = useState('')
@@ -271,6 +275,7 @@ function App() {
     if (isLoggedIn) {
       setEditSiteTitle(siteContent.settings.title || '')
       setEditLogo(siteContent.settings.logo || '')
+      setEditBerandaPdf(siteContent.settings.berandaPdf || '')
       if (siteContent.pages[activeTab]) {
         setEditTitle(siteContent.pages[activeTab].title || '')
         setEditContent(siteContent.pages[activeTab].content || '')
@@ -291,10 +296,11 @@ function App() {
     const finalContent = updatedData?.content || editContent
     const finalSiteTitle = updatedData?.siteTitle || editSiteTitle
     const finalLogo = updatedData?.siteLogo || editLogo
+    const finalBerandaPdf = updatedData?.berandaPdf || editBerandaPdf
     
     const newContent = {
       ...siteContent,
-      settings: { logo: finalLogo, title: finalSiteTitle },
+      settings: { logo: finalLogo, title: finalSiteTitle, berandaPdf: finalBerandaPdf },
       pages: {
         ...siteContent.pages,
         [activeTab]: { title: finalTitle, content: finalContent }
@@ -943,6 +949,61 @@ function App() {
     const currentPage = siteContent.pages[activeTab]
     if (!currentPage) return null
 
+    if (activeTab === 'Beranda') {
+      return (
+        <div className="page-content">
+          {!isLoggedIn ? (
+            <div className="page-card">
+              <h2>{currentPage.title}</h2>
+              <div 
+                className="content-body" 
+                dangerouslySetInnerHTML={{ __html: currentPage.content || '' }} 
+              />
+              
+              {siteContent.settings.berandaPdf && (
+                <div className="pdf-viewer-section" style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+                  {!showPdfReader ? (
+                    <button className="btn-save" onClick={() => setShowPdfReader(true)}>Read More (Buka PDF)</button>
+                  ) : (
+                    <div className="pdf-reader-container">
+                      <button className="btn-delete" onClick={() => setShowPdfReader(false)} style={{ marginBottom: '10px' }}>Tutup PDF</button>
+                      <iframe 
+                        src={`${siteContent.settings.berandaPdf}#toolbar=0`} 
+                        width="100%" 
+                        height="600px" 
+                        style={{ border: 'none', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                        title="PDF Viewer"
+                      ></iframe>
+                      <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '10px', fontStyle: 'italic' }}>
+                        Catatan: Download dinonaktifkan untuk pengunjung umum.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <AdminDashboard 
+              initialTitle={editTitle || ''}
+              initialContent={editContent || ''}
+              initialSiteTitle={editSiteTitle || ''}
+              initialSiteLogo={editLogo || ''}
+              initialBerandaPdf={editBerandaPdf || ''}
+              onSave={(data: any) => {
+                setEditTitle(data.title || '');
+                setEditContent(data.content || '');
+                setEditSiteTitle(data.siteTitle || '');
+                setEditLogo(data.siteLogo || '');
+                setEditBerandaPdf(data.berandaPdf || '');
+              }}
+              onPublish={(data: any) => saveChanges(data)}
+              isSaving={isSaving}
+            />
+          )}
+        </div>
+      )
+    }
+
     return (
       <div className="page-content">
         {!isLoggedIn ? (
@@ -959,11 +1020,13 @@ function App() {
             initialContent={editContent || ''}
             initialSiteTitle={editSiteTitle || ''}
             initialSiteLogo={editLogo || ''}
+            initialBerandaPdf={editBerandaPdf || ''}
             onSave={(data: any) => {
               setEditTitle(data.title || '');
               setEditContent(data.content || '');
               setEditSiteTitle(data.siteTitle || '');
               setEditLogo(data.siteLogo || '');
+              setEditBerandaPdf(data.berandaPdf || '');
             }}
             onPublish={(data: any) => saveChanges(data)}
             isSaving={isSaving}
