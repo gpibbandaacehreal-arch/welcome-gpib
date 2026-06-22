@@ -49,7 +49,7 @@ interface FullContent {
   proposals: any[]; // New field for shared proposal history
 }
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwnXm-7uc82ZXbcqLVp6wSDmhtelLbods2bHTHEjqov06jzTGf-eCXuXsDnzzGlFDBkTw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbycROw7gCO_xEwHmberQzMDfUf_nJIRVUuN-90o7DpSrhV1p8yZhQEqCUL9LEB_I-WF0g/exec';
 
 const DEFAULT_CONTENT: FullContent = {
   settings: {
