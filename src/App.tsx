@@ -53,7 +53,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbycROw7gCO_xEwHmberQ
 
 const DEFAULT_CONTENT: FullContent = {
   settings: {
-    logo: "/LOGO_GPIB.jpg",
+    logo: "/LOGO_GPIB_BANDA_ACEH.png",
     title: "GPIB BANDA ACEH",
     berandaPdf: ""
   },
@@ -168,6 +168,20 @@ function App() {
     setIsMobileMenuOpen(false)
     setIsDropdownOpen(false)
   }, [activeTab])
+
+  // Reset logo lama jika masih pakai LOGO_GPIB.jpg
+  useEffect(() => {
+  const saved = localStorage.getItem('gpibSiteContent');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed?.settings?.logo === '/LOGO_GPIB.jpg') {
+        parsed.settings.logo = '/LOGO_GPIB_BANDA_ACEH.png';
+        localStorage.setItem('gpibSiteContent', JSON.stringify(parsed));
+      }
+    } catch (e) {}
+  }
+}, []);
 
   // Refactor fetchData to be reusable for polling
   const fetchData = async (isSilent = false) => {
@@ -1040,7 +1054,7 @@ function App() {
     return (
       <div className="loading-screen">
         <div className="loading-logo-container">
-          <img src={siteContent?.settings?.logo || "/LOGO_GPIB.jpg"} alt="Logo GPIB" />
+          <img src={siteContent?.settings?.logo || "/LOGO_GPIB_BANDA_ACEH.png"} alt="Logo GPIB Banda Aceh" />
         </div>
         <p>Membuka situs GPIB Banda Aceh...</p>
       </div>
