@@ -900,11 +900,27 @@ function App() {
     )
   }
 
-  const handleAddProposalSupabase = async (pemohon: string, tujuanSurat: string) => {
-    const { data, error } = await supabase.rpc('create_proposal', {
-      pemohon_name: pemohon,
-      tujuan: tujuanSurat
-    });
+  const handleAddProposalSupabase = async (pemohon: string, tujuanSurat: string, noUrut: number, nomorSurat: string) => {
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const tanggalSurat = `${dd}/${mm}/${yyyy}`;
+
+    const newRecord = {
+      nomor_surat: nomorSurat,
+      tujuan_surat: tujuanSurat,
+      pemohon,
+      tanggal_surat: tanggalSurat,
+      no_urut: noUrut,
+      link_download: '-'
+    };
+
+    const { data, error } = await supabase
+      .from('riwayat_download')
+      .insert([newRecord])
+      .select();
+
     if (error) {
       console.error('Error adding proposal:', error);
       throw error;
@@ -913,24 +929,32 @@ function App() {
   };
 
   const handleEditProposalSupabase = async (id: number, updates: Partial<SupabaseProposal>) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('riwayat_download')
       .update(updates)
-      .eq('id', id);
+      .eq('id', id)
+      .select();
     if (error) {
       console.error('Error updating proposal:', error);
       throw error;
     }
+    if (!data || data.length === 0) {
+      throw new Error('Gagal memperbaharui data. Anda mungkin tidak memiliki izin atau data tidak ditemukan.');
+    }
   };
 
   const handleDeleteProposalSupabase = async (id: number) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('riwayat_download')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select();
     if (error) {
       console.error('Error deleting proposal:', error);
       throw error;
+    }
+    if (!data || data.length === 0) {
+      throw new Error('Gagal menghapus data. Anda mungkin tidak memiliki izin atau data tidak ditemukan.');
     }
   };
 

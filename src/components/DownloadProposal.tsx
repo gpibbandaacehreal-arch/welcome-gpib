@@ -1,14 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { generateProposalPDF } from '../utils/pdfUtils';
-import { supabase, type SupabaseProposal } from '../services/supabase';
+import { type SupabaseProposal } from '../services/supabase';
 
 interface DownloadProposalProps {
   isLoggedIn: boolean;
   proposals: SupabaseProposal[];
-  onAddProposal: (pemohon: string, tujuanSurat: string) => Promise<any>;
+  onAddProposal: (pemohon: string, tujuanSurat: string, noUrut: number, nomorSurat: string) => Promise<any>;
   onEditProposal: (id: number, updates: Partial<SupabaseProposal>) => Promise<void>;
   onDeleteProposal: (id: number) => Promise<void>;
 }
+
+const getNextNoUrut = (existingNoUruts: number[]): number => {
+  const base = 13;
+  let candidate = base;
+  // Filter out any invalid numbers, 99999 (our test number), etc.
+  const set = new Set(existingNoUruts.filter(n => typeof n === 'number' && !isNaN(n) && n > 0 && n !== 99999));
+  while (set.has(candidate)) {
+    candidate++;
+  }
+  return candidate;
+};
+
+
 
 const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposals, onAddProposal, onEditProposal, onDeleteProposal }) => {
   const [tujuanSurat, setTujuanSurat] = useState('');
@@ -19,7 +32,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
   const [editNomor, setEditNomor] = useState('');
   const [editPemohon, setEditPemohon] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [nextNomorSurat, setNextNomorSurat] = useState<string>('Memuat...');
+  const [nextNomorSurat, setNextNomorSurat] = useState<string>('');
 
   // Filter and Sort proposals
   const filteredHistory = proposals.filter(p => 
@@ -30,43 +43,13 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
   
   const history = [...filteredHistory]; // Supabase already sorted by no_urut descending
 
-  const fetchNextNomorSurat = async () => {
-    try {
-      const { data, error } = await supabase.rpc('get_next_nomor_surat');
-      if (error) {
-        console.error('Error fetching next nomor surat from RPC:', error);
-        // Fallback logic if RPC fails
-        generateFallbackNomor();
-      } else if (data) {
-        setNextNomorSurat(data);
-      } else {
-        generateFallbackNomor();
-      }
-    } catch (err) {
-      console.error('Error in fetchNextNomorSurat:', err);
-      generateFallbackNomor();
-    }
-  };
 
-  const generateFallbackNomor = () => {
-    const nextNo = proposals.length > 0 ? Math.max(...proposals.map(p => p.no_urut)) + 1 : 13;
-    const now = new Date();
-    const mm = now.getMonth() + 1;
-    const yyyy = now.getFullYear();
-    const yyShort = String(yyyy).slice(-2);
-    const romanMonths = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
-    const mmRoman = romanMonths[mm - 1];
-    const generated = `${nextNo}/${mmRoman}-‘${yyShort}/MJ-BA/PPSGGR30-1`;
-    setNextNomorSurat(generated);
-  };
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchNextNomorSurat();
-    }
-  }, [isLoggedIn, proposals]);
 
   const handleProses = async () => {
+    if (!nextNomorSurat.trim()) {
+      alert('Nomor Surat Selanjutnya harus diisi.');
+      return;
+    }
     if (!tujuanSurat.trim()) {
       alert('Tujuan Proposal harus diisi.');
       return;
@@ -79,9 +62,15 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
     setIsProcessing(true);
     
     try {
-      const insertedRows = await onAddProposal(pemohon, tujuanSurat);
+      const noUruts = proposals.map(p => p.no_urut);
+      // Try to parse the starting number from manual input, e.g. "14/..." -> 14
+      const parsedNo = parseInt(nextNomorSurat.split('/')[0], 10);
+      const nextNo = (!isNaN(parsedNo) && parsedNo > 0) ? parsedNo : getNextNoUrut(noUruts);
+
+      const insertedRows = await onAddProposal(pemohon, tujuanSurat, nextNo, nextNomorSurat.trim());
       setTujuanSurat('');
       setPemohon('');
+      setNextNomorSurat('');
       alert('Proposal berhasil diproses secara global via Supabase!');
       
       // Auto download PDF for the newly created record
@@ -115,8 +104,8 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
         pemohon: editPemohon 
       });
       setEditingId(null);
-    } catch (err) {
-      alert('Gagal mengupdate proposal di Supabase.');
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengupdate proposal di Supabase.');
     } finally {
       setIsProcessing(false);
     }
@@ -129,8 +118,8 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
     setIsProcessing(true);
     try {
       await onDeleteProposal(id);
-    } catch (err) {
-      alert('Gagal menghapus proposal di Supabase.');
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus proposal di Supabase.');
     } finally {
       setIsProcessing(false);
     }
@@ -167,8 +156,13 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
           <h3>Form Input Proposal (Real-time Global)</h3>
           <div className="form-grid">
             <div className="form-group">
-              <label>Nomor Surat Selanjutnya (Otomatis):</label>
-              <input type="text" value={nextNomorSurat} disabled style={{ backgroundColor: '#f0f0f0' }} />
+              <label>Nomor Surat Selanjutnya:</label>
+              <input 
+                type="text" 
+                value={nextNomorSurat} 
+                onChange={(e) => setNextNomorSurat(e.target.value)} 
+                placeholder="Masukkan nomor surat manual..."
+              />
             </div>
             <div className="form-group">
               <label>Nama Pemohon:</label>
