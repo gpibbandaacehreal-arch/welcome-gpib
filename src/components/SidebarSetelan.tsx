@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { compressImage } from '../utils/imageUtils';
+import { compressImage, toImageKitUrl } from '../utils/imageUtils';
 import { supabase } from '../services/supabase';
 
 interface SidebarSetelanProps {
@@ -117,7 +117,7 @@ const SidebarSetelan: React.FC<SidebarSetelanProps> = ({
               <label>Logo Situs (Maksimal 2 MB)</label>
               {siteLogo && (
                 <div style={{marginBottom: '5px'}}>
-                  <img src={siteLogo} alt="Logo" style={{maxHeight: '40px', borderRadius: '4px'}} />
+                  <img src={toImageKitUrl(siteLogo, 400)} alt="Logo" style={{maxHeight: '40px', borderRadius: '4px'}} />
                 </div>
               )}
               <input 

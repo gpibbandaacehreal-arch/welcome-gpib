@@ -3,7 +3,7 @@ import './App.css'
 import LoginForm from './components/LoginForm'
 import { authService } from './services/auth'
 import AdminDashboard from './components/AdminDashboard'
-import { compressImage } from './utils/imageUtils'
+import { compressImage, toImageKitUrl, filterHtmlImages } from './utils/imageUtils'
 import DownloadProposal from './components/DownloadProposal'
 import { supabase, type SupabaseProposal } from './services/supabase'
 
@@ -200,7 +200,7 @@ function App() {
           if (page && !page.content && page.blocks) {
             page.content = page.blocks.map((b: any) => {
               if (b.type === 'text') return `<p>${b.value.replace(/\n/g, '<br>')}</p>`;
-              if (b.type === 'image') return `<div class="content-image-wrapper"><img src="${b.value}" class="content-image" /></div>`;
+              if (b.type === 'image') return `<div class="content-image-wrapper"><img src="${toImageKitUrl(b.value, 800)}" class="content-image" /></div>`;
               return '';
             }).join('');
           }
@@ -601,13 +601,13 @@ function App() {
               <div className="photo-previews">
                 {umatForm.photo && (
                   <div className="photo-preview-item">
-                    <img src={umatForm.photo} alt="Umat" />
+                    <img src={toImageKitUrl(umatForm.photo, 400)} alt="Umat" />
                     <span>Photo</span>
                   </div>
                 )}
                 {umatForm.kk && (
                   <div className="photo-preview-item">
-                    <img src={umatForm.kk} alt="KK" />
+                    <img src={toImageKitUrl(umatForm.kk, 800)} alt="KK" />
                     <span>KK</span>
                   </div>
                 )}
@@ -995,7 +995,7 @@ function App() {
               <h2>{currentPage.title}</h2>
               <div 
                 className="content-body" 
-                dangerouslySetInnerHTML={{ __html: currentPage.content || '' }} 
+                dangerouslySetInnerHTML={{ __html: filterHtmlImages(currentPage.content || '') }} 
               />
               
               {siteContent.settings.berandaPdf && (
@@ -1049,7 +1049,7 @@ function App() {
             <h2>{currentPage.title}</h2>
             <div 
               className="content-body" 
-              dangerouslySetInnerHTML={{ __html: currentPage.content || '' }} 
+              dangerouslySetInnerHTML={{ __html: filterHtmlImages(currentPage.content || '') }} 
             />
           </div>
         ) : (
@@ -1078,7 +1078,7 @@ function App() {
     return (
       <div className="loading-screen">
         <div className="loading-logo-container">
-          <img src={siteContent?.settings?.logo || "/LOGO_GPIB_BANDA_ACEH.png"} alt="Logo GPIB Banda Aceh" />
+          <img src={toImageKitUrl(siteContent?.settings?.logo || "/LOGO_GPIB_BANDA_ACEH.png", 400)} alt="Logo GPIB Banda Aceh" />
         </div>
         <p>Membuka situs GPIB Banda Aceh...</p>
       </div>
@@ -1089,7 +1089,7 @@ function App() {
     <div className="app-container">
       <header className="header">
         <div className="logo-container">
-          <img src={siteContent.settings.logo} alt="Logo GPIB" />
+          <img src={toImageKitUrl(siteContent.settings.logo, 400)} alt="Logo GPIB" />
         </div>
         <h1>{siteContent.settings.title}</h1>
       </header>

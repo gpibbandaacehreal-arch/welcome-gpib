@@ -2,7 +2,7 @@ import React, { useRef, useMemo } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import EditorToolbar, { modules, formats } from './EditorToolbar';
-import { compressImage } from '../utils/imageUtils';
+import { compressImage, uploadImageToCloud } from '../utils/imageUtils';
 
 interface EditorUtamaProps {
   title: string;
@@ -27,15 +27,23 @@ const EditorUtama: React.FC<EditorUtamaProps> = ({ title, setTitle, content, set
         const reader = new FileReader();
         reader.onload = async () => {
           const base64 = reader.result as string;
-          // Kompres gambar sebelum dimasukkan ke editor
-          const compressed = await compressImage(base64, 800, 0.7);
+          try {
+            // Kompres gambar sebelum diunggah
+            const compressed = await compressImage(base64, 800, 0.7);
+            
+            // Unggah gambar ke Supabase Storage (bucket beranda-pdf)
+            const publicUrl = await uploadImageToCloud(compressed);
 
-          const quill = quillRef.current?.getEditor();
-          if (quill) {
-            const range = quill.getSelection();
-            if (range) {
-              quill.insertEmbed(range.index, 'image', compressed);
+            const quill = quillRef.current?.getEditor();
+            if (quill) {
+              const range = quill.getSelection();
+              if (range) {
+                quill.insertEmbed(range.index, 'image', publicUrl);
+              }
             }
+          } catch (uploadError: any) {
+            console.error('Error uploading image to cloud:', uploadError);
+            alert('Gagal mengunggah gambar ke cloud: ' + uploadError.message);
           }
         };
         reader.readAsDataURL(file);
