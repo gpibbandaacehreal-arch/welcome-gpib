@@ -81,24 +81,65 @@ export const extractGoogleDriveFileId = (url: string): string | null => {
   return null;
 };
 
-/**
- * Mengonversi URL Google Drive ke URL ImageKit Proxy CDN
- * @param url URL asli
- * @param width Lebar gambar opsional
- * @returns URL terkonversi atau URL asli jika tidak cocok
- */
 export const toImageKitUrl = (url: string, width?: number): string => {
   const endpoint = import.meta.env.VITE_IMAGEKIT_ENDPOINT;
   if (!endpoint || !url) return url;
 
-  // Jika berupa base64, kembalikan asli
+  // 1. Jika berupa base64, kembalikan asli
   if (url.startsWith('data:')) return url;
 
+  const cleanEndpoint = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
+
+  // 2. Jika sudah berupa URL ImageKit, jangan diubah lagi
+  if (url.startsWith(cleanEndpoint)) {
+    if (url.includes('?tr=')) return url;
+    const tr = width ? `?tr=w-${width},q-80` : `?tr=q-80`;
+    return `${url}${tr}`;
+  }
+
+  // 3. Google Drive
   const fileId = extractGoogleDriveFileId(url);
   if (fileId) {
-    const cleanEndpoint = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
     const tr = width ? `?tr=w-${width},q-80` : `?tr=q-80`;
     return `${cleanEndpoint}/d/${fileId}${tr}`;
+  }
+
+  // 4. Supabase Storage
+  if (url.includes('supabase.co/storage/v1/object/public/')) {
+    try {
+      const parsed = new URL(url);
+      const tr = width ? `?tr=w-${width},q-80` : `?tr=q-80`;
+      return `${cleanEndpoint}${parsed.pathname}${tr}`;
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // 5. Relative URL (misal: /LOGO_GPIB_BANDA_ACEH.png atau LOGO_GPIB.jpg)
+  if (url.startsWith('/')) {
+    const tr = width ? `?tr=w-${width},q-80` : `?tr=q-80`;
+    return `${cleanEndpoint}${url}${tr}`;
+  }
+
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    const tr = width ? `?tr=w-${width},q-80` : `?tr=q-80`;
+    return `${cleanEndpoint}/${url}${tr}`;
+  }
+
+  // 6. Absolute URL untuk domain kita sendiri (welcome-gpib.vercel.app atau localhost)
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname;
+    if (hostname === 'welcome-gpib.vercel.app' || hostname === 'localhost' || hostname === '127.0.0.1') {
+      const tr = width ? `?tr=w-${width},q-80` : `?tr=q-80`;
+      return `${cleanEndpoint}${parsed.pathname}${tr}`;
+    }
+    
+    // 7. Domain eksternal lainnya (proxy via ImageKit jika diatur)
+    const tr = width ? `?tr=w-${width},q-80` : `?tr=q-80`;
+    return `${cleanEndpoint}${parsed.pathname}${parsed.search}${tr}`;
+  } catch (e) {
+    // ignore
   }
 
   return url;

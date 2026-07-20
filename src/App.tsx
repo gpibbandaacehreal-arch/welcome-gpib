@@ -3,7 +3,7 @@ import './App.css'
 import LoginForm from './components/LoginForm'
 import { authService } from './services/auth'
 import AdminDashboard from './components/AdminDashboard'
-import { compressImage, toImageKitUrl, filterHtmlImages } from './utils/imageUtils'
+import { compressImage, toImageKitUrl, filterHtmlImages, uploadImageToCloud } from './utils/imageUtils'
 import DownloadProposal from './components/DownloadProposal'
 import { supabase, type SupabaseProposal } from './services/supabase'
 
@@ -145,6 +145,10 @@ function App() {
   const [editBerandaPdf, setEditBerandaPdf] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [showPdfReader, setShowPdfReader] = useState(false)
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const [isUploadingKk, setIsUploadingKk] = useState(false)
+  const [isUserUploadingPhoto, setIsUserUploadingPhoto] = useState(false)
+  const [isUserUploadingKk, setIsUserUploadingKk] = useState(false)
 
   // Data Umat States
   const [userSearch, setUserSearch] = useState('')
@@ -489,11 +493,23 @@ function App() {
         e.target.value = ''
         return
       }
+      if (field === 'photo') setIsUploadingPhoto(true)
+      else setIsUploadingKk(true)
       const reader = new FileReader()
       reader.onloadend = async () => {
         const base64 = reader.result as string
-        const compressed = await compressImage(base64, 800, 0.6)
-        setUmatForm({ ...umatForm, [field]: compressed })
+        try {
+          const compressed = await compressImage(base64, 800, 0.6)
+          const publicUrl = await uploadImageToCloud(compressed)
+          setUmatForm(prev => ({ ...prev, [field]: publicUrl }))
+        } catch (error: any) {
+          console.error(`Gagal mengunggah ${field}:`, error)
+          alert(`Gagal mengunggah ${field}: ` + error.message)
+          e.target.value = ''
+        } finally {
+          if (field === 'photo') setIsUploadingPhoto(false)
+          else setIsUploadingKk(false)
+        }
       }
       reader.readAsDataURL(file)
     }
@@ -590,11 +606,13 @@ function App() {
                 </div>
                 <div className="form-group">
                   <label>Upload Photo (Maksimal 5 MB):</label>
-                  <input type="file" accept="image/*" onChange={e => handleUmatFile(e, 'photo')} />
+                  <input type="file" accept="image/*" onChange={e => handleUmatFile(e, 'photo')} disabled={isUploadingPhoto} />
+                  {isUploadingPhoto && <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '5px' }}>Mengunggah foto...</p>}
                 </div>
                 <div className="form-group">
                   <label>Upload KK (Kartu Keluarga - Maksimal 5 MB):</label>
-                  <input type="file" accept="image/*" onChange={e => handleUmatFile(e, 'kk')} />
+                  <input type="file" accept="image/*" onChange={e => handleUmatFile(e, 'kk')} disabled={isUploadingKk} />
+                  {isUploadingKk && <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '5px' }}>Mengunggah KK...</p>}
                 </div>
               </div>
 
@@ -622,7 +640,9 @@ function App() {
                 />
               </div>
               <div className="admin-action-buttons">
-                <button className="btn-save" onClick={handleSaveUmat}>SIMPAN / PERBAHARUI DATA UMAT</button>
+                <button className="btn-save" onClick={handleSaveUmat} disabled={isUploadingPhoto || isUploadingKk}>
+                  {isUploadingPhoto || isUploadingKk ? 'MENGUNGGAH GAMBAR...' : 'SIMPAN / PERBAHARUI DATA UMAT'}
+                </button>
                 {officialUmat.some(u => u.nama.toLowerCase() === (umatForm.nama || '').toLowerCase()) && (
                   <button className="btn-delete" onClick={() => handleDeleteUmat()}>HAPUS DATA</button>
                 )}
@@ -836,15 +856,26 @@ function App() {
                           e.target.value = '';
                           return;
                         }
+                        setIsUserUploadingPhoto(true);
                         const reader = new FileReader();
                         reader.onloadend = async () => {
                           const base64 = reader.result as string;
-                          const compressed = await compressImage(base64, 800, 0.6);
-                          setUserUmatForm({ ...userUmatForm, photo: compressed });
+                          try {
+                            const compressed = await compressImage(base64, 800, 0.6);
+                            const publicUrl = await uploadImageToCloud(compressed);
+                            setUserUmatForm(prev => ({ ...prev, photo: publicUrl }));
+                          } catch (error: any) {
+                            console.error('Gagal mengunggah foto:', error);
+                            alert('Gagal mengunggah foto ke cloud storage: ' + error.message);
+                            e.target.value = '';
+                          } finally {
+                            setIsUserUploadingPhoto(false);
+                          }
                         }
                         reader.readAsDataURL(file);
                       }
-                    }} />
+                    }} disabled={isUserUploadingPhoto} />
+                    {isUserUploadingPhoto && <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '5px' }}>Mengunggah foto...</p>}
                   </div>
                   <div className="form-group">
                     <label>Upload KK (Kartu Keluarga - Maksimal 5 MB):</label>
@@ -856,15 +887,26 @@ function App() {
                           e.target.value = '';
                           return;
                         }
+                        setIsUserUploadingKk(true);
                         const reader = new FileReader();
                         reader.onloadend = async () => {
                           const base64 = reader.result as string;
-                          const compressed = await compressImage(base64, 800, 0.6);
-                          setUserUmatForm({ ...userUmatForm, kk: compressed });
+                          try {
+                            const compressed = await compressImage(base64, 800, 0.6);
+                            const publicUrl = await uploadImageToCloud(compressed);
+                            setUserUmatForm(prev => ({ ...prev, kk: publicUrl }));
+                          } catch (error: any) {
+                            console.error('Gagal mengunggah KK:', error);
+                            alert('Gagal mengunggah KK ke cloud storage: ' + error.message);
+                            e.target.value = '';
+                          } finally {
+                            setIsUserUploadingKk(false);
+                          }
                         }
                         reader.readAsDataURL(file);
                       }
-                    }} />
+                    }} disabled={isUserUploadingKk} />
+                    {isUserUploadingKk && <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '5px' }}>Mengunggah KK...</p>}
                   </div>
                 </div>
                 
@@ -872,9 +914,9 @@ function App() {
                   <button 
                     className="btn-save" 
                     onClick={handleUserFormSubmit}
-                    disabled={isSubmittingUserForm}
+                    disabled={isSubmittingUserForm || isUserUploadingPhoto || isUserUploadingKk}
                   >
-                    {isSubmittingUserForm ? 'Mengirim...' : 'KIRIM'}
+                    {isSubmittingUserForm ? 'Mengirim...' : (isUserUploadingPhoto || isUserUploadingKk ? 'Mengunggah Gambar...' : 'KIRIM')}
                   </button>
                 </div>
               </div>

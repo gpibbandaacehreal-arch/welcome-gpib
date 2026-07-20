@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { compressImage, toImageKitUrl } from '../utils/imageUtils';
+import { compressImage, toImageKitUrl, uploadImageToCloud } from '../utils/imageUtils';
 import { supabase } from '../services/supabase';
 
 interface SidebarSetelanProps {
@@ -27,6 +27,7 @@ const SidebarSetelan: React.FC<SidebarSetelanProps> = ({
 }) => {
   const [activeSection, setActiveSection] = useState<string | null>('label');
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   const toggleSection = (section: string) => {
     setActiveSection(activeSection === section ? null : section);
@@ -40,11 +41,21 @@ const SidebarSetelan: React.FC<SidebarSetelanProps> = ({
         e.target.value = '';
         return;
       }
+      setIsUploadingLogo(true);
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result as string;
-        const compressed = await compressImage(base64, 400, 0.7); // Logo tidak butuh besar
-        setSiteLogo(compressed);
+        try {
+          const compressed = await compressImage(base64, 400, 0.7); // Logo tidak butuh besar
+          const publicUrl = await uploadImageToCloud(compressed);
+          setSiteLogo(publicUrl);
+        } catch (error: any) {
+          console.error('Gagal mengunggah logo:', error);
+          alert('Gagal mengunggah logo ke cloud storage: ' + error.message);
+          e.target.value = '';
+        } finally {
+          setIsUploadingLogo(false);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -124,8 +135,10 @@ const SidebarSetelan: React.FC<SidebarSetelanProps> = ({
                 type="file" 
                 accept="image/*"
                 onChange={handleLogoUpload}
+                disabled={isUploadingLogo}
                 className="sidebar-input"
               />
+              {isUploadingLogo && <p style={{fontSize: '0.7rem', color: '#666', marginTop: '2px'}}>Mengunggah logo...</p>}
             </div>
             
             <div className="sidebar-field" style={{marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '10px'}}>
