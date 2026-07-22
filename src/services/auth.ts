@@ -91,7 +91,34 @@ export const authService = {
       });
 
       if (!error && data?.user) {
-        const profile = await fetchAdminProfile(data.user.id);
+        let profile = await fetchAdminProfile(data.user.id);
+        
+        // Safety Fallback if profile or sub_menu_id is missing
+        if (!profile || (!profile.sub_menu_id && profile.role !== 'super_admin')) {
+          const emailLower = (data.user.email || cleanEmail).toLowerCase();
+          let matchedSub: string | null = null;
+          let matchedRole = 'admin_pelkat';
+
+          if (emailLower.includes('pa')) { matchedSub = 'PA'; }
+          else if (emailLower.includes('pt')) { matchedSub = 'PT'; }
+          else if (emailLower.includes('gp')) { matchedSub = 'GP'; }
+          else if (emailLower.includes('pkb')) { matchedSub = 'PKB'; }
+          else if (emailLower.includes('pkp')) { matchedSub = 'PKP'; }
+          else if (emailLower.includes('germasa')) { matchedSub = 'GermasaLH'; matchedRole = 'admin_komisi'; }
+          else if (emailLower.includes('pg')) { matchedSub = 'PG'; matchedRole = 'admin_komisi'; }
+          else if (emailLower.includes('inforkom') || emailLower.includes('litbang')) { matchedSub = 'Inforkom-Litbang'; matchedRole = 'admin_komisi'; }
+
+          if (matchedSub || emailLower.includes('super') || emailLower === 'admingpib@gpib.org') {
+            const isSuper = emailLower.includes('super') || emailLower === 'admingpib@gpib.org';
+            profile = {
+              id: profile?.id || data.user.id,
+              role: isSuper ? 'super_admin' : (profile?.role || matchedRole),
+              sub_menu_id: isSuper ? null : (profile?.sub_menu_id || matchedSub),
+              sub_menu: profile?.sub_menu || (matchedSub ? { id: matchedSub, name: matchedSub } : null),
+            };
+          }
+        }
+
         localStorage.setItem('isGPBAdmin', 'true');
         localStorage.setItem('adminToken', data.session?.access_token || 'true');
         if (profile) {

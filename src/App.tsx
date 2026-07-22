@@ -1226,19 +1226,19 @@ function App() {
               <li className="dropdown-submenu">
                 <span>Pelayanan Kategorial (PELKAT) ▸</span>
                 <ul className="submenu-list">
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PA'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Pelayanan Anak (PA)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PT'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Pelayanan Taruna (PT)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Gerakan Pemuda (GP)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKB'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Bapak (PKB)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Perempuan (PKP)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PA'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/PA' : '/'); }}>Pelayanan Anak (PA)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PT'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/PT' : '/'); }}>Pelayanan Taruna (PT)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/GP' : '/'); }}>Gerakan Pemuda (GP)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKB'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/PKB' : '/'); }}>Persekutuan Kaum Bapak (PKB)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/PKP' : '/'); }}>Persekutuan Kaum Perempuan (PKP)</li>
                 </ul>
               </li>
               <li className="dropdown-submenu">
                 <span>KOMISI ▸</span>
                 <ul className="submenu-list">
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GermasaLH'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>GermasaLH (Gereja, Masyarakat, Agama, Lingkungan Hidup)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PG'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>PG (Pembangunan Gereja)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('Inforkom-Litbang'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Inforkom-Litbang (Info, Orga, Kom, Litbang)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GermasaLH'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/GermasaLH' : '/'); }}>GermasaLH (Gereja, Masyarakat, Agama, Lingkungan Hidup)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PG'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/PG' : '/'); }}>PG (Pembangunan Gereja)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('Inforkom-Litbang'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/Inforkom-Litbang' : '/'); }}>Inforkom-Litbang (Info, Orga, Kom, Litbang)</li>
                 </ul>
               </li>
             </ul>
@@ -1305,9 +1305,9 @@ function App() {
           isLoggedIn ? (
             <Navigate
               to={
-                profile?.role === 'super_admin' || !profile?.sub_menu_id
-                  ? '/admin'
-                  : `/admin/submenu/${profile?.sub_menu?.slug || profile?.sub_menu?.name || profile?.sub_menu_id}`
+                profile?.role === 'super_admin'
+                  ? '/admin/manage'
+                  : `/admin/submenu/${normalizeSubMenuKey(profile?.sub_menu || profile?.sub_menu_id) || 'PA'}`
               }
               replace
             />
