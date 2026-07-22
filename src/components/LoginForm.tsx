@@ -1,13 +1,13 @@
 
 import React, { useState } from 'react';
-import { authService } from '../services/auth';
+import { authService, AdminProfile } from '../services/auth';
 
 interface LoginFormProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess: (profile?: AdminProfile | null) => void;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,15 +19,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     setError(null);
 
     try {
-      const response = await authService.login(username, password);
+      const response = await authService.login(email, password);
       
       if (response.success) {
-        onLoginSuccess();
+        onLoginSuccess(response.profile);
       } else {
         setError(response.message || 'Terjadi kesalahan saat login.');
       }
-    } catch (err) {
-      setError('Gagal menghubungkan ke server. Periksa koneksi internet Anda.');
+    } catch (err: any) {
+      setError(err?.message || 'Gagal menghubungkan ke server. Periksa koneksi internet Anda.');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -42,27 +42,31 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         <div style={{ 
           backgroundColor: '#ffebee', 
           color: '#c62828', 
-          padding: '10px', 
-          borderRadius: '4px', 
+          padding: '12px 16px', 
+          borderRadius: '6px', 
           marginBottom: '20px',
           fontSize: '0.9rem',
-          textAlign: 'center',
-          border: '1px solid #ffcdd2'
+          textAlign: 'left',
+          border: '1px solid #ffcdd2',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
         }}>
-          {error}
+          <span style={{ fontSize: '1.1rem' }}>⚠️</span>
+          <span>{error}</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <input 
-            type="text" 
-            placeholder="Username" 
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            type="email" 
+            placeholder="Email Admin" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             disabled={isLoading}
             required 
-            autoComplete="username"
+            autoComplete="email"
           />
         </div>
         
@@ -118,3 +122,4 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 };
 
 export default LoginForm;
+

@@ -1,0 +1,22 @@
+# Dependency directories
+node_modules/
+
+# Build outputs
+dist/
+.vercel/
+
+# Cache directories
+.aider.tags.cache.v4/
+
+# Sensitive data & credentials
+.env
+*.json
+!package.json
+!tsconfig*.json
+
+# Large media files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.ico

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import './App.css'
 import LoginForm from './components/LoginForm'
 import { authService } from './services/auth'
@@ -6,6 +7,8 @@ import AdminDashboard from './components/AdminDashboard'
 import { compressImage, toImageKitUrl, filterHtmlImages, uploadImageToCloud } from './utils/imageUtils'
 import DownloadProposal from './components/DownloadProposal'
 import { supabase, type SupabaseProposal } from './services/supabase'
+import { useAuth } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
 
 
 // Types
@@ -108,13 +111,15 @@ const DEFAULT_CONTENT: FullContent = {
 };
 
 function App() {
+  const { user, profile, logout: authLogout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isLoggedIn = !!user;
   const [activeTab, setActiveTab] = useState<Tab>('Beranda')
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    return authService.isAuthenticated()
-  })
-  
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+
   
   const [siteContent, setSiteContent] = useState<FullContent>(() => {
     const saved = localStorage.getItem('gpibSiteContent')
@@ -301,11 +306,11 @@ function App() {
     }
   }, [isLoggedIn, activeTab, siteContent])
 
-  const handleLogout = () => {
-    authService.logout()
-    setIsLoggedIn(false)
-    setActiveTab('Beranda')
-  }
+  const handleLogout = async () => {
+    await authLogout();
+    setActiveTab('Beranda');
+    navigate('/login');
+  };
 
   const saveChanges = async (updatedData?: any) => {
     setIsSaving(true)
@@ -1003,9 +1008,13 @@ function App() {
   const renderPage = () => {
     if (activeTab === 'Login' && !isLoggedIn) {
       return (
-        <LoginForm onLoginSuccess={() => {
-          setIsLoggedIn(true);
-          setActiveTab('Beranda');
+        <LoginForm onLoginSuccess={(prof) => {
+          const targetSubMenu = prof?.sub_menu?.slug || prof?.sub_menu?.name || prof?.sub_menu_id;
+          if (prof?.role === 'super_admin' || !targetSubMenu) {
+            navigate('/admin');
+          } else {
+            navigate(`/admin/submenu/${targetSubMenu}`);
+          }
         }} />
       )
     }
@@ -1128,6 +1137,7 @@ function App() {
   }
 
   return (
+  const renderMainLayout = () => (
     <div className="app-container">
       <header className="header">
         <div className="logo-container">
@@ -1143,13 +1153,13 @@ function App() {
         <ul className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
           <li 
             className={activeTab === 'Beranda' ? 'active' : ''}
-            onClick={() => { setActiveTab('Beranda'); setIsMobileMenuOpen(false); }}
+            onClick={() => { setActiveTab('Beranda'); setIsMobileMenuOpen(false); navigate('/'); }}
           >
             Beranda
           </li>
           <li 
             className={activeTab === 'Jadwal Ibadah' ? 'active' : ''}
-            onClick={() => { setActiveTab('Jadwal Ibadah'); setIsMobileMenuOpen(false); }}
+            onClick={() => { setActiveTab('Jadwal Ibadah'); setIsMobileMenuOpen(false); navigate('/'); }}
           >
             Jadwal Ibadah
           </li>
@@ -1159,23 +1169,23 @@ function App() {
               Organisasi Gereja {isDropdownOpen ? '▴' : '▾'}
             </span>
             <ul className="dropdown-menu">
-              <li onClick={() => { setActiveTab('Organisasi Gereja'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); }}>Struktur Organisasi</li>
+              <li onClick={() => { setActiveTab('Organisasi Gereja'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Struktur Organisasi</li>
               <li className="dropdown-submenu">
                 <span>Pelayanan Kategorial (PELKAT) ▸</span>
                 <ul className="submenu-list">
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PA'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); }}>Pelayanan Anak (PA)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PT'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); }}>Pelayanan Taruna (PT)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); }}>Gerakan Pemuda (GP)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKB'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); }}>Persekutuan Kaum Bapak (PKB)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); }}>Persekutuan Kaum Perempuan (PKP)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PA'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Pelayanan Anak (PA)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PT'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Pelayanan Taruna (PT)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Gerakan Pemuda (GP)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKB'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Bapak (PKB)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Perempuan (PKP)</li>
                 </ul>
               </li>
               <li className="dropdown-submenu">
                 <span>KOMISI ▸</span>
                 <ul className="submenu-list">
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GermasaLH'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); }}>GermasaLH (Gereja, Masyarakat, Agama, Lingkungan Hidup)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PG'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); }}>PG (Pembangunan Gereja)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('Inforkom-Litbang'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); }}>Inforkom-Litbang (Info, Orga, Kom, Litbang)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GermasaLH'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>GermasaLH (Gereja, Masyarakat, Agama, Lingkungan Hidup)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PG'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>PG (Pembangunan Gereja)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('Inforkom-Litbang'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Inforkom-Litbang (Info, Orga, Kom, Litbang)</li>
                 </ul>
               </li>
             </ul>
@@ -1183,7 +1193,7 @@ function App() {
 
           <li 
             className={activeTab === 'Data Umat' ? 'active' : ''}
-            onClick={() => { setActiveTab('Data Umat'); setIsMobileMenuOpen(false); }}
+            onClick={() => { setActiveTab('Data Umat'); setIsMobileMenuOpen(false); navigate('/'); }}
           >
             Data Umat
           </li>
@@ -1193,7 +1203,7 @@ function App() {
           ) : (
             <li 
               className={activeTab === 'Login' ? 'active' : ''} 
-              onClick={() => { setActiveTab('Login'); setIsMobileMenuOpen(false); }}
+              onClick={() => { setActiveTab('Login'); setIsMobileMenuOpen(false); navigate('/login'); }}
             >
               Login
             </li>
@@ -1201,7 +1211,7 @@ function App() {
 
           <li 
             className={activeTab === 'Download' ? 'active' : ''}
-            onClick={() => { setActiveTab('Download'); setIsMobileMenuOpen(false); }}
+            onClick={() => { setActiveTab('Download'); setIsMobileMenuOpen(false); navigate('/'); }}
           >
             Download
           </li>
@@ -1216,7 +1226,62 @@ function App() {
         &copy; 2026 GPIB BANDA ACEH. All Rights Reserved.
       </footer>
     </div>
-  )
+  );
+
+  return (
+    <Routes>
+      {/* Route Login */}
+      <Route
+        path="/login"
+        element={
+          isLoggedIn ? (
+            <Navigate
+              to={
+                profile?.role === 'super_admin' || !profile?.sub_menu_id
+                  ? '/admin'
+                  : `/admin/submenu/${profile?.sub_menu?.slug || profile?.sub_menu?.name || profile?.sub_menu_id}`
+              }
+              replace
+            />
+          ) : (
+            renderMainLayout()
+          )
+        }
+      />
+
+      {/* Protected Routes untuk /admin/* */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            {renderMainLayout()}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/submenu/:subMenuId"
+        element={
+          <ProtectedRoute>
+            {renderMainLayout()}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/*"
+        element={
+          <ProtectedRoute>
+            {renderMainLayout()}
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Fallback / Public Route */}
+      <Route path="*" element={renderMainLayout()} />
+    </Routes>
+  );
+
 }
 
 export default App
