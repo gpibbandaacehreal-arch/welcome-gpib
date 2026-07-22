@@ -14,7 +14,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 // Types
 type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Organisasi Gereja' | 'Data Umat' | 'Download' | 'Login' 
   | 'PA' | 'PT' | 'GP' | 'PKB' | 'PKP' 
-  | 'GermasaLH' | 'PG' | 'Inforkom-Litbang' | 'KelolaAdmin';
+  | 'GermasaLH' | 'PG' | 'Inforkom-Litbang' | 'KelolaAdmin' | (string & {});
 
 
 interface ContentBlock {
@@ -297,15 +297,34 @@ function App() {
 
   useEffect(() => {
     if (isLoggedIn) {
-      setEditSiteTitle(siteContent.settings.title || '')
-      setEditLogo(siteContent.settings.logo || '')
-      setEditBerandaPdf(siteContent.settings.berandaPdf || '')
-      if (siteContent.pages[activeTab]) {
-        setEditTitle(siteContent.pages[activeTab].title || '')
-        setEditContent(siteContent.pages[activeTab].content || '')
-      }
+      setEditSiteTitle(siteContent.settings?.title || '')
+      setEditLogo(siteContent.settings?.logo || '')
+      setEditBerandaPdf(siteContent.settings?.berandaPdf || '')
+      
+      const pageData = siteContent.pages?.[activeTab] || {
+        title: activeTab === 'PA' ? 'Pelayanan Anak (PA)' :
+               activeTab === 'PT' ? 'Pelayanan Taruna (PT)' :
+               activeTab === 'GP' ? 'Gerakan Pemuda (GP)' :
+               activeTab === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
+               activeTab === 'PKP' ? 'Persekutuan Kaum Perempuan (PKP)' : activeTab,
+        content: `<p>Informasi & Kegiatan ${activeTab} GPIB Banda Aceh.</p>`
+      };
+
+      setEditTitle(pageData.title || '')
+      setEditContent(pageData.content || '')
     }
   }, [isLoggedIn, activeTab, siteContent])
+
+  useEffect(() => {
+    if (location.pathname === '/admin/manage') {
+      setActiveTab('KelolaAdmin');
+    } else if (location.pathname.startsWith('/admin/submenu/')) {
+      const subId = location.pathname.replace('/admin/submenu/', '');
+      if (subId) setActiveTab(subId);
+    } else if (isLoggedIn && profile?.sub_menu_id && (location.pathname === '/admin' || location.pathname === '/login')) {
+      setActiveTab(String(profile.sub_menu_id));
+    }
+  }, [location.pathname, isLoggedIn, profile])
 
   const handleLogout = async () => {
     await authLogout();
@@ -1014,11 +1033,14 @@ function App() {
     if (activeTab === 'Login' && !isLoggedIn) {
       return (
         <LoginForm onLoginSuccess={(prof) => {
-          const targetSubMenu = prof?.sub_menu?.slug || prof?.sub_menu?.name || prof?.sub_menu_id;
+          const targetSubMenu = prof?.sub_menu_id || prof?.sub_menu?.name || prof?.sub_menu?.slug;
           if (prof?.role === 'super_admin' || !targetSubMenu) {
-            navigate('/admin');
+            setActiveTab('KelolaAdmin');
+            navigate('/admin/manage');
           } else {
-            navigate(`/admin/submenu/${targetSubMenu}`);
+            const subStr = String(targetSubMenu);
+            setActiveTab(subStr);
+            navigate(`/admin/submenu/${subStr}`);
           }
         }} />
       )
@@ -1040,8 +1062,17 @@ function App() {
       )
     }
 
-    const currentPage = siteContent.pages[activeTab]
-    if (!currentPage) return null
+    const currentPage = siteContent.pages[activeTab] || {
+      title: activeTab === 'PA' ? 'Pelayanan Anak (PA)' :
+             activeTab === 'PT' ? 'Pelayanan Taruna (PT)' :
+             activeTab === 'GP' ? 'Gerakan Pemuda (GP)' :
+             activeTab === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
+             activeTab === 'PKP' ? 'Persekutuan Kaum Perempuan (PKP)' :
+             activeTab === 'GermasaLH' ? 'GermasaLH' :
+             activeTab === 'PG' ? 'Komisi Pembangunan Gereja (PG)' :
+             activeTab === 'Inforkom-Litbang' ? 'Inforkom-Litbang' : activeTab,
+      content: `<p>Informasi & Kegiatan ${activeTab} GPIB Banda Aceh.</p>`
+    };
 
     if (activeTab === 'Beranda') {
       return (
@@ -1203,12 +1234,22 @@ function App() {
           </li>
 
           {isLoggedIn ? (
-            <li 
-              className={activeTab === 'KelolaAdmin' || location.pathname === '/admin/manage' ? 'active' : ''}
-              onClick={() => { setActiveTab('KelolaAdmin'); setIsMobileMenuOpen(false); navigate('/admin/manage'); }}
-            >
-              Kelola Admin
-            </li>
+            <>
+              {profile?.role === 'super_admin' && (
+                <li 
+                  className={activeTab === 'KelolaAdmin' || location.pathname === '/admin/manage' ? 'active' : ''}
+                  onClick={() => { setActiveTab('KelolaAdmin'); setIsMobileMenuOpen(false); navigate('/admin/manage'); }}
+                >
+                  Kelola Admin
+                </li>
+              )}
+              <li 
+                style={{ color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' }}
+                onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
+              >
+                Logout {profile?.sub_menu_id || profile?.sub_menu?.name || (profile?.role === 'super_admin' ? 'Admin' : '')}
+              </li>
+            </>
           ) : (
             <li 
               className={activeTab === 'Login' ? 'active' : ''} 
