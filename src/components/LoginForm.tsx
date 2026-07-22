@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { authService, type AdminProfile } from '../services/auth';
+import { type AdminProfile } from '../services/auth';
+import { useAuth } from '../context/AuthContext';
 
 interface LoginFormProps {
   onLoginSuccess: (profile?: AdminProfile | null) => void;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -18,7 +20,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     setError(null);
 
     try {
-      const response = await authService.login(email, password);
+      const response = await login(email, password);
       
       if (response.success) {
         onLoginSuccess(response.profile);

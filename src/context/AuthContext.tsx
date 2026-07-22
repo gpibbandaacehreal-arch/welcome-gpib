@@ -1,13 +1,19 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase';
-import { fetchAdminProfile, type AdminProfile } from '../services/auth';
+import { authService, fetchAdminProfile, type AdminProfile, type AuthResponse } from '../services/auth';
+
+export interface LocalUser {
+  id: string;
+  email: string;
+}
 
 interface AuthContextType {
   session: Session | null;
-  user: User | null;
+  user: User | LocalUser | null;
   profile: AdminProfile | null;
   isLoading: boolean;
+  login: (usernameOrEmail: string, password: string) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -16,13 +22,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | LocalUser | null>(null);
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  const checkLocalAuth = () => {
+    if (authService.isAuthenticated()) {
+      const storedProfile = authService.getProfile();
+      setUser({ id: storedProfile?.id || 'super_admin_1', email: 'admingpib@gpib.org' });
+      setProfile(storedProfile || { role: 'super_admin', sub_menu_id: null });
+      return true;
+    }
+    return false;
+  };
+
   const loadUserProfile = async (currentUser: User | null) => {
     if (!currentUser) {
-      setProfile(null);
+      if (!checkLocalAuth()) {
+        setProfile(null);
+      }
       return;
     }
 
@@ -31,32 +49,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(adminProfile);
     } catch (err) {
       console.error('Error fetching admin profile in AuthContext:', err);
-      setProfile(null);
+      if (!checkLocalAuth()) {
+        setProfile(null);
+      }
     }
   };
 
   useEffect(() => {
-    // 1. Ambil session aktif dari Supabase saat load
+    // Check initial local authentication state
+    const hasLocal = checkLocalAuth();
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       const currentUser = session?.user ?? null;
-      setUser(currentUser);
       if (currentUser) {
+        setUser(currentUser);
         loadUserProfile(currentUser).finally(() => setIsLoading(false));
       } else {
+        if (!hasLocal) {
+          setUser(null);
+        }
         setIsLoading(false);
       }
     });
 
-    // 2. Listener perubahan Auth State (login/logout/refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       const currentUser = session?.user ?? null;
-      setUser(currentUser);
       if (currentUser) {
+        setUser(currentUser);
         await loadUserProfile(currentUser);
       } else {
-        setProfile(null);
+        if (!checkLocalAuth()) {
+          setUser(null);
+          setProfile(null);
+        }
       }
       setIsLoading(false);
     });
@@ -66,21 +93,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const login = async (usernameOrEmail: string, password: string): Promise<AuthResponse> => {
+    setIsLoading(true);
+    const res = await authService.login(usernameOrEmail, password);
+    if (res.success) {
+      if (res.user) {
+        setUser(res.user);
+      } else {
+        setUser({ id: 'super_admin_1', email: 'admingpib@gpib.org' });
+      }
+      setProfile(res.profile || { role: 'super_admin', sub_menu_id: null });
+    }
+    setIsLoading(false);
+    return res;
+  };
+
   const logout = async () => {
     setIsLoading(true);
-    await supabase.auth.signOut();
+    await authService.logout();
     setSession(null);
     setUser(null);
     setProfile(null);
-    localStorage.removeItem('isGPBAdmin');
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminProfile');
     setIsLoading(false);
   };
 
   const refreshProfile = async () => {
-    if (user) {
-      await loadUserProfile(user);
+    if (user && 'id' in user && user.id !== 'super_admin_1') {
+      await loadUserProfile(user as User);
+    } else {
+      checkLocalAuth();
     }
   };
 
@@ -91,6 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         profile,
         isLoading,
+        login,
         logout,
         refreshProfile,
       }}
