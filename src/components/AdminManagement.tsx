@@ -192,6 +192,7 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
         id: newUserId,
         nama_admin: emailToUse,
         email: emailToUse,
+        password: newAdminPassword.trim() || undefined,
         role: newSubMenuCategory === 'KOMISI' ? 'admin_komisi' : 'admin_pelkat',
         sub_menu_id: createdSubId,
       });
@@ -240,14 +241,20 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
         }
       }
 
-      // Upsert admin_profile
-      await supabase.from('admin_profile').upsert({
+      // Upsert admin_profile (termasuk menyimpan password untuk sinkronisasi login)
+      const profileDataToSave: any = {
         id: finalId.startsWith('new_') ? `profile_${editSubMenuId || admin.sub_menu_id}` : finalId,
         nama_admin: editNama.trim(),
         email: editEmail.trim(),
         sub_menu_id: editSubMenuId,
         role: admin.role,
-      });
+      };
+
+      if (editPassword.trim()) {
+        profileDataToSave.password = editPassword.trim();
+      }
+
+      await supabase.from('admin_profile').upsert(profileDataToSave);
 
       setMessage({ type: 'success', text: `Data admin "${editNama}" berhasil disimpan ke Supabase!` });
       setEditingId(null);
