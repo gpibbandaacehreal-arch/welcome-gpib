@@ -24,7 +24,7 @@ interface AdminManagementProps {
 }
 
 export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) => {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [adminList, setAdminList] = useState<AdminUserRecord[]>([]);
   const [subMenuList, setSubMenuList] = useState<SubMenuRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -35,6 +35,8 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [newSubMenuName, setNewSubMenuName] = useState<string>('');
   const [newSubMenuCategory, setNewSubMenuCategory] = useState<'PELKAT' | 'KOMISI'>('PELKAT');
+  const [newAdminEmail, setNewAdminEmail] = useState<string>('');
+  const [newAdminPassword, setNewAdminPassword] = useState<string>('');
 
   // Load Data dari Supabase (sub_menu & admin_profile)
   const fetchData = async () => {
@@ -52,7 +54,6 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
           name: item.name || item.nama || item.title || `Sub Menu ${item.id}`,
           category: item.category || item.tipe || 'PELKAT',
         }));
-        setSubMenuList(currentSubMenus);
       } else {
         // Fallback daftar standar Pelkat & Komisi jika belum terisi di DB
         currentSubMenus = [
@@ -65,44 +66,78 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
           { id: 'PG', name: 'Komisi Pembangunan Gereja (PG)', category: 'KOMISI' },
           { id: 'Inforkom-Litbang', name: 'Inforkom-Litbang', category: 'KOMISI' },
         ];
-        setSubMenuList(currentSubMenus);
       }
+
+      // Pastikan Pelkat standar (PA, PT, GP, PKB, PKP) selalu ada di daftar sub_menu
+      const defaultUnits: SubMenuRecord[] = [
+        { id: 'PA', name: 'Pelayanan Anak (PA)', category: 'PELKAT' },
+        { id: 'PT', name: 'Pelayanan Taruna (PT)', category: 'PELKAT' },
+        { id: 'GP', name: 'Gerakan Pemuda (GP)', category: 'PELKAT' },
+        { id: 'PKB', name: 'Persekutuan Kaum Bapak (PKB)', category: 'PELKAT' },
+        { id: 'PKP', name: 'Persekutuan Kaum Perempuan (PKP)', category: 'PELKAT' },
+      ];
+
+      defaultUnits.forEach((def) => {
+        const defIdStr = String(def.id).toLowerCase();
+        if (!currentSubMenus.some(s => String(s.id).toLowerCase() === defIdStr || s.name.toLowerCase().includes(defIdStr))) {
+          currentSubMenus.push(def);
+        }
+      });
+
+      setSubMenuList(currentSubMenus);
 
       // 2. Fetch data admin_profile
       const { data: profiles, error: profileError } = await supabase
         .from('admin_profile')
         .select('*');
 
-      if (!profileError && profiles && profiles.length > 0) {
-        const formatted: AdminUserRecord[] = profiles.map((p) => {
-          const matchingSub = currentSubMenus.find(s => String(s.id) === String(p.sub_menu_id));
-          return {
-            id: p.id || p.user_id,
-            nama_admin: p.nama_admin || p.email || p.username || (p.id === user?.id ? (user?.email || 'Admin Utama') : `Admin ${p.role || ''}`),
-            email: p.email || (p.id === user?.id ? user?.email : ''),
-            role: p.role || 'admin_pelkat',
-            sub_menu_id: p.sub_menu_id,
-            sub_menu_name: matchingSub ? matchingSub.name : (p.sub_menu_id ? `Sub Menu ${p.sub_menu_id}` : 'Akses Penuh (Super Admin)'),
+      const existingProfiles = (!profileError && profiles) ? profiles : [];
+
+      const list: AdminUserRecord[] = [];
+
+      // Tambahkan Super Admin / User Aktif lebih dulu
+      const superAdminProfile = existingProfiles.find(p => p.role === 'super_admin' || p.id === user?.id);
+      list.push({
+        id: superAdminProfile?.id || user?.id || 'super_admin_1',
+        nama_admin: superAdminProfile?.nama_admin || superAdminProfile?.email || user?.email || 'Super Admin GPIB',
+        email: superAdminProfile?.email || user?.email || 'admingpib@gpib.org',
+        role: 'super_admin',
+        sub_menu_id: null,
+        sub_menu_name: 'Akses Penuh (Super Admin)',
+        password: '••••••••',
+        isEditing: false,
+      });
+
+      // Untuk setiap unit Pelkat / Komisi di subMenuList, pastikan ada baris admin di tabel
+      currentSubMenus.forEach((sub) => {
+        const matched = existingProfiles.find(p => String(p.sub_menu_id) === String(sub.id));
+        if (matched) {
+          list.push({
+            id: matched.id || matched.user_id,
+            nama_admin: matched.nama_admin || matched.email || matched.username || `Admin ${sub.name}`,
+            email: matched.email || `${String(sub.id).toLowerCase()}@gpib.org`,
+            role: matched.role || (sub.category === 'KOMISI' ? 'admin_komisi' : 'admin_pelkat'),
+            sub_menu_id: sub.id,
+            sub_menu_name: sub.name,
             password: '••••••••',
             isEditing: false,
-          };
-        });
-        setAdminList(formatted);
-      } else {
-        // Fallback user aktif saat ini
-        setAdminList([
-          {
-            id: user?.id || '1',
-            nama_admin: user?.email || 'Admin Utama',
-            email: user?.email || '',
-            role: profile?.role || 'super_admin',
-            sub_menu_id: profile?.sub_menu_id || null,
-            sub_menu_name: profile?.sub_menu?.name || 'Akses Penuh (Super Admin)',
+          });
+        } else {
+          // Buat entri admin default untuk Pelkat/Komisi yang belum terhubung di admin_profile
+          list.push({
+            id: `new_${sub.id}`,
+            nama_admin: `Admin ${sub.name}`,
+            email: `${String(sub.id).toLowerCase().replace(/[^a-z0-9]/g, '')}@gpib.org`,
+            role: sub.category === 'KOMISI' ? 'admin_komisi' : 'admin_pelkat',
+            sub_menu_id: sub.id,
+            sub_menu_name: sub.name,
             password: '••••••••',
             isEditing: false,
-          }
-        ]);
-      }
+          });
+        }
+      });
+
+      setAdminList(list);
     } catch (err: any) {
       console.error('Error loading admin data from Supabase:', err);
     } finally {
@@ -133,11 +168,34 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
     setMessage(null);
     try {
       for (const admin of adminList) {
-        // Update data ke admin_profile
+        let finalId = admin.id;
+
+        // Jika password diisi dan bukan placeholder '••••••••'
+        if (admin.password && admin.password !== '••••••••' && admin.email) {
+          if (admin.id === user?.id) {
+            const { error: passErr } = await supabase.auth.updateUser({
+              password: admin.password,
+            });
+            if (passErr) console.warn('Update auth error:', passErr.message);
+          } else {
+            // Buat / daftarkan akun di Supabase Auth jika belum ada
+            const { data: authData, error: signUpErr } = await supabase.auth.signUp({
+              email: admin.email,
+              password: admin.password,
+            });
+            if (!signUpErr && authData?.user) {
+              finalId = authData.user.id;
+            }
+          }
+        }
+
+        // Upsert data ke admin_profile
         const { error: updateErr } = await supabase
           .from('admin_profile')
           .upsert({
-            id: admin.id,
+            id: finalId.startsWith('new_') ? `profile_${admin.sub_menu_id}` : finalId,
+            nama_admin: admin.nama_admin,
+            email: admin.email,
             sub_menu_id: admin.sub_menu_id,
             role: admin.role,
           });
@@ -145,22 +203,11 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
         if (updateErr) {
           console.warn('Upsert admin_profile warning:', updateErr.message);
         }
-
-        // Jika password diubah untuk user yang sedang login
-        if (admin.id === user?.id && admin.password && admin.password !== '••••••••') {
-          const { error: passErr } = await supabase.auth.updateUser({
-            password: admin.password,
-          });
-
-          if (passErr) {
-            throw new Error(`Gagal memperbarui password: ${passErr.message}`);
-          }
-        }
       }
 
       await refreshProfile();
+      await fetchData();
       setMessage({ type: 'success', text: 'Data admin dan Pelkat/Komisi berhasil disimpan ke Supabase!' });
-      setAdminList((prev) => prev.map((a) => ({ ...a, isEditing: false, password: '••••••••' })));
     } catch (err: any) {
       setMessage({ type: 'error', text: err?.message || 'Gagal menyimpan perubahan.' });
     } finally {
@@ -176,32 +223,55 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
     setSaving(true);
     setMessage(null);
     try {
-      const { error } = await supabase
+      // 1. Insert ke sub_menu
+      const { data: subData } = await supabase
         .from('sub_menu')
         .insert([
           {
             name: newSubMenuName.trim(),
             category: newSubMenuCategory,
           },
-        ]);
+        ])
+        .select();
 
-      if (error) {
-        throw new Error(`Gagal menambah Pelkat/Komisi: ${error.message}`);
+      const createdSubId = subData && subData[0] ? subData[0].id : `custom_${Date.now()}`;
+
+      // 2. Buat akun admin di Supabase Auth & admin_profile jika email & password diisi
+      let newUserId = `profile_${createdSubId}`;
+      const emailToUse = newAdminEmail.trim() || `${newSubMenuName.toLowerCase().replace(/[^a-z0-9]/g, '')}@gpib.org`;
+
+      if (newAdminPassword.trim()) {
+        const { data: authData } = await supabase.auth.signUp({
+          email: emailToUse,
+          password: newAdminPassword.trim(),
+        });
+        if (authData?.user) {
+          newUserId = authData.user.id;
+        }
       }
 
-      setMessage({ type: 'success', text: `Pelkat/Komisi "${newSubMenuName}" berhasil ditambahkan!` });
+      // Upsert profil admin di Supabase
+      await supabase.from('admin_profile').upsert({
+        id: newUserId,
+        nama_admin: emailToUse,
+        email: emailToUse,
+        role: newSubMenuCategory === 'KOMISI' ? 'admin_komisi' : 'admin_pelkat',
+        sub_menu_id: createdSubId,
+      });
+
+      setMessage({ type: 'success', text: `Pelkat/Komisi "${newSubMenuName}" dan akun admin berhasil ditambahkan!` });
       setNewSubMenuName('');
+      setNewAdminEmail('');
+      setNewAdminPassword('');
       setShowAddModal(false);
       await fetchData();
     } catch (err: any) {
-      const newId = `custom_${Date.now()}`;
-      setSubMenuList((prev) => [
-        ...prev,
-        { id: newId, name: newSubMenuName.trim(), category: newSubMenuCategory },
-      ]);
-      setMessage({ type: 'success', text: `Pelkat/Komisi "${newSubMenuName}" ditambahkan ke daftar.` });
+      console.error('Error adding Pelkat/Admin:', err);
       setNewSubMenuName('');
+      setNewAdminEmail('');
+      setNewAdminPassword('');
       setShowAddModal(false);
+      await fetchData();
     } finally {
       setSaving(false);
     }
@@ -239,7 +309,7 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
             <thead>
               <tr style={{ backgroundColor: '#1a365d', color: '#ffffff', textAlign: 'left', fontSize: '0.9rem' }}>
                 <th style={{ padding: '12px 16px', width: '50px' }}>NO</th>
-                <th style={{ padding: '12px 16px' }}>NAMA ADMIN</th>
+                <th style={{ padding: '12px 16px' }}>NAMA ADMIN / EMAIL</th>
                 <th style={{ padding: '12px 16px' }}>PELKAT / KOMISI</th>
                 <th style={{ padding: '12px 16px' }}>PASSWORD</th>
                 <th style={{ padding: '12px 16px', textAlign: 'center', width: '120px' }}>EDIT</th>
@@ -258,7 +328,12 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
                         style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', width: '100%' }}
                       />
                     ) : (
-                      <span style={{ fontWeight: '500', color: '#1e293b' }}>{admin.nama_admin}</span>
+                      <div>
+                        <div style={{ fontWeight: '500', color: '#1e293b' }}>{admin.nama_admin}</div>
+                        {admin.email && admin.email !== admin.nama_admin && (
+                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{admin.email}</div>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td style={{ padding: '12px 16px' }}>
@@ -337,7 +412,7 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
             gap: '6px'
           }}
         >
-          ➕ Tambah Pelkat / Komisi
+          ➕ Tambah Pelkat / Komisi Baru
         </button>
 
         <button
@@ -361,7 +436,7 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
         </button>
       </div>
 
-      {/* Modal Tambah Pelkat / Komisi */}
+      {/* Modal Tambah Pelkat / Komisi & Admin */}
       {showAddModal && (
         <div style={{
           position: 'fixed',
@@ -372,8 +447,8 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
           alignItems: 'center',
           zIndex: 1000
         }}>
-          <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '10px', width: '90%', maxWidth: '450px' }}>
-            <h3 style={{ marginTop: 0, color: '#1e293b' }}>Tambah Pelkat / Komisi Baru</h3>
+          <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '10px', width: '90%', maxWidth: '480px' }}>
+            <h3 style={{ marginTop: 0, color: '#1e293b' }}>Tambah Pelkat / Komisi Baru & Akun Admin</h3>
             <form onSubmit={handleAddSubMenu}>
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Kategori:</label>
@@ -387,14 +462,36 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
                 </select>
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
+              <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Nama Pelkat / Komisi:</label>
                 <input
                   type="text"
-                  placeholder="Contoh: Komisi Pemuda / Pelkat GP"
+                  placeholder="Contoh: Persekutuan Kaum Bapak (PKB)"
                   value={newSubMenuName}
                   onChange={(e) => setNewSubMenuName(e.target.value)}
                   required
+                  style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Email / Username Admin:</label>
+                <input
+                  type="email"
+                  placeholder="Contoh: pkb@gpib.org"
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                  style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Password Admin:</label>
+                <input
+                  type="password"
+                  placeholder="Ketik password untuk admin baru ini"
+                  value={newAdminPassword}
+                  onChange={(e) => setNewAdminPassword(e.target.value)}
                   style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                 />
               </div>
@@ -412,7 +509,7 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
                   disabled={saving}
                   style={{ padding: '8px 16px', backgroundColor: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
                 >
-                  Simpan
+                  Simpan & Tambah Admin
                 </button>
               </div>
             </form>
