@@ -177,7 +177,7 @@ export const authService = {
           if (subMenu) {
             subMenuData = subMenu;
           } else {
-            subMenuData = { id: matchedSubMenuId, name: `Pelkat / Komisi ${matchedSubMenuId}` };
+            subMenuData = { id: matchedSubMenuId, name: String(matchedSubMenuId) };
           }
         }
 
