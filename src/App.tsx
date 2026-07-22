@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import './App.css'
 import LoginForm from './components/LoginForm'
-import { authService } from './services/auth'
 import AdminDashboard from './components/AdminDashboard'
 import AdminManagement from './components/AdminManagement'
 import { compressImage, toImageKitUrl, filterHtmlImages, uploadImageToCloud } from './utils/imageUtils'
@@ -1142,7 +1141,6 @@ function App() {
     )
   }
 
-  return (
   const renderMainLayout = () => (
     <div className="app-container">
       <header className="header">

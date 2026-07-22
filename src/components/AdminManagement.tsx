@@ -176,15 +176,14 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
     setSaving(true);
     setMessage(null);
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('sub_menu')
         .insert([
           {
             name: newSubMenuName.trim(),
             category: newSubMenuCategory,
           },
-        ])
-        .select();
+        ]);
 
       if (error) {
         throw new Error(`Gagal menambah Pelkat/Komisi: ${error.message}`);

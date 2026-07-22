@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { authService, AdminProfile } from '../services/auth';
+import { authService, type AdminProfile } from '../services/auth';
 
 interface LoginFormProps {
   onLoginSuccess: (profile?: AdminProfile | null) => void;
