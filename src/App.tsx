@@ -3,19 +3,20 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import './App.css'
 import LoginForm from './components/LoginForm'
 import AdminDashboard from './components/AdminDashboard'
-import AdminManagement from './components/AdminManagement'
+import APanel from './components/APanel'
 import { compressImage, toImageKitUrl, filterHtmlImages, uploadImageToCloud } from './utils/imageUtils'
 import DownloadProposal from './components/DownloadProposal'
 import { supabase, type SupabaseProposal } from './services/supabase'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import { normalizeSubMenuKey } from './utils/menuUtils'
+import { siteSettingsService, type SiteSettings } from './services/siteSettings'
 
 
 // Types
 type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Organisasi Gereja' | 'Data Umat' | 'Download' | 'Login' 
   | 'PA' | 'PT' | 'GP' | 'PKB' | 'PKP' 
-  | 'GermasaLH' | 'PG' | 'Inforkom-Litbang' | 'KelolaAdmin' | (string & {});
+  | 'GermasaLH' | 'PG' | 'Inforkom-Litbang' | 'APanel' | (string & {});
 
 
 interface ContentBlock {
@@ -27,12 +28,6 @@ interface PageContent {
   title: string;
   content: string;
   blocks?: ContentBlock[]; // Opsional untuk migrasi
-}
-
-interface SiteSettings {
-  logo: string;
-  title: string;
-  berandaPdf?: string;
 }
 
 interface UmatRecord {
@@ -321,8 +316,43 @@ function App() {
   }, [isLoggedIn, activeTab])
 
   useEffect(() => {
-    if (location.pathname === '/admin/manage') {
-      setActiveTab('KelolaAdmin');
+    const fetchSiteSettings = async () => {
+      try {
+        const settings = await siteSettingsService.getSettings();
+        setSiteContent(prev => ({
+          ...prev,
+          settings: {
+            ...prev.settings,
+            ...settings
+          }
+        }));
+      } catch (err) {
+        console.error('Gagal memuat setelan situs:', err);
+      }
+    };
+    fetchSiteSettings();
+  }, []);
+
+  const handleSaveSettings = async (newSettings: SiteSettings) => {
+    await siteSettingsService.saveSettings(newSettings);
+    setSiteContent(prev => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        ...newSettings
+      }
+    }));
+    try {
+      localStorage.setItem('gpibSiteContent', JSON.stringify({
+        ...siteContent,
+        settings: newSettings
+      }));
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    if (location.pathname === '/admin/apanel' || location.pathname === '/admin/manage') {
+      setActiveTab('APanel');
     } else if (location.pathname.startsWith('/admin/submenu/')) {
       const rawSubId = location.pathname.replace('/admin/submenu/', '');
       const subId = normalizeSubMenuKey(rawSubId);
@@ -1038,8 +1068,8 @@ function App() {
 
 
   const renderPage = () => {
-    if (activeTab === 'KelolaAdmin' || location.pathname === '/admin/manage') {
-      return <AdminManagement onLogout={handleLogout} />;
+    if (activeTab === 'APanel' || location.pathname === '/admin/apanel') {
+      return <APanel settings={siteContent.settings} onSaveSettings={handleSaveSettings} onLogout={handleLogout} />;
     }
 
     if (activeTab === 'Login' && !isLoggedIn) {
@@ -1169,6 +1199,11 @@ function App() {
     )
   }
 
+
+
+
+
+
   if (isLoading) {
     return (
       <div className="loading-screen">
@@ -1180,16 +1215,48 @@ function App() {
     )
   }
 
+  const isKelolaAdmin = (name: string) => {
+    const lower = name.toLowerCase().replace(/\s+/g, '');
+    return lower.includes('kelolaadmin');
+  };
+
+  const customUtamaMenus = siteContent.settings.customMenus?.filter(m => m.category === 'UTAMA' && m.isActive !== false && !isKelolaAdmin(m.name)) || [];
+  const customPelkatMenus = siteContent.settings.customMenus?.filter(m => m.category === 'PELKAT' && m.isActive !== false && !isKelolaAdmin(m.name)) || [];
+  const customKomisiMenus = siteContent.settings.customMenus?.filter(m => m.category === 'KOMISI' && m.isActive !== false && !isKelolaAdmin(m.name)) || [];
+
+  const headerBgImage = siteContent.settings.headerBgImage;
+  const headerBgOverlay = siteContent.settings.headerBgOverlay || 'rgba(0,0,0,0.2)';
+  const headerInlineStyle: React.CSSProperties = {
+    fontFamily: siteContent.settings.headerFontFamily || undefined,
+    backgroundImage: headerBgImage ? `linear-gradient(${headerBgOverlay}, ${headerBgOverlay}), url(${toImageKitUrl(headerBgImage)})` : undefined,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  };
+
+  const headerTitleStyle: React.CSSProperties = {
+    fontSize: siteContent.settings.headerFontSize || undefined,
+    color: headerBgImage ? '#ffffff' : (siteContent.settings.headerTextColor || undefined),
+    textShadow: headerBgImage ? '0 2px 8px rgba(0,0,0,0.7)' : undefined,
+  };
+
+  const navInlineStyle: React.CSSProperties = {
+    backgroundColor: siteContent.settings.navBgColor || undefined,
+    fontFamily: siteContent.settings.navFontFamily || undefined,
+    fontSize: siteContent.settings.navFontSize || undefined,
+    fontWeight: siteContent.settings.navFontWeight || undefined,
+    color: siteContent.settings.navTextColor || undefined,
+  };
+
   const renderMainLayout = () => (
     <div className="app-container">
-      <header className="header">
+      <header className="header" style={headerInlineStyle}>
         <div className="logo-container">
           <img src={toImageKitUrl(siteContent.settings.logo, 400)} alt="Logo GPIB" />
         </div>
-        <h1>{siteContent.settings.title}</h1>
+        <h1 style={headerTitleStyle}>{siteContent.settings.title}</h1>
       </header>
 
-      <nav className="navbar">
+      <nav className="navbar" style={navInlineStyle}>
         <div className="mobile-menu-toggle" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           {isMobileMenuOpen ? '✕' : '☰'} Menu
         </div>
@@ -1207,7 +1274,7 @@ function App() {
             Jadwal Ibadah
           </li>
           
-          <li className={`dropdown ${['Organisasi Gereja', 'PA', 'PT', 'GP', 'PKB', 'PKP', 'GermasaLH', 'PG', 'Inforkom-Litbang'].includes(activeTab) ? 'active' : ''} ${isDropdownOpen ? 'dropdown-open' : ''}`}>
+          <li className={`dropdown ${['Organisasi Gereja', 'PA', 'PT', 'GP', 'PKB', 'PKP', 'GermasaLH', 'PG', 'Inforkom-Litbang', ...customPelkatMenus.map(m => m.name), ...customKomisiMenus.map(m => m.name)].includes(activeTab) ? 'active' : ''} ${isDropdownOpen ? 'dropdown-open' : ''}`}>
             <span onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
               Organisasi Gereja {isDropdownOpen ? '▴' : '▾'}
             </span>
@@ -1221,6 +1288,9 @@ function App() {
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('GP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Gerakan Pemuda (GP)</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKB'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Bapak (PKB)</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Perempuan (PKP)</li>
+                  {customPelkatMenus.map(m => (
+                    <li key={m.id} onClick={(e) => { e.stopPropagation(); setActiveTab(m.name); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>{m.name}</li>
+                  ))}
                 </ul>
               </li>
               <li className="dropdown-submenu">
@@ -1229,10 +1299,23 @@ function App() {
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('GermasaLH'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>GermasaLH (Gereja, Masyarakat, Agama, Lingkungan Hidup)</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PG'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>PG (Pembangunan Gereja)</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('Inforkom-Litbang'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Inforkom-Litbang (Info, Orga, Kom, Litbang)</li>
+                  {customKomisiMenus.map(m => (
+                    <li key={m.id} onClick={(e) => { e.stopPropagation(); setActiveTab(m.name); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>{m.name}</li>
+                  ))}
                 </ul>
               </li>
             </ul>
           </li>
+
+          {customUtamaMenus.map(m => (
+            <li 
+              key={m.id}
+              className={activeTab === m.name ? 'active' : ''}
+              onClick={() => { setActiveTab(m.name); setIsMobileMenuOpen(false); navigate('/'); }}
+            >
+              {m.name}
+            </li>
+          ))}
 
           <li 
             className={activeTab === 'Data Umat' ? 'active' : ''}
@@ -1244,10 +1327,11 @@ function App() {
           {isLoggedIn ? (
             <>
               <li 
-                className={activeTab === 'KelolaAdmin' || location.pathname === '/admin/manage' ? 'active' : ''}
-                onClick={() => { setActiveTab('KelolaAdmin'); setIsMobileMenuOpen(false); navigate('/admin/manage'); }}
+                className={activeTab === 'APanel' || location.pathname === '/admin/apanel' ? 'active' : ''}
+                onClick={() => { setActiveTab('APanel'); setIsMobileMenuOpen(false); navigate('/admin/apanel'); }}
+                style={{ color: '#facc15', fontWeight: 'bold' }}
               >
-                Kelola Admin
+                ⚙️ A.Panel
               </li>
               <li 
                 style={{ color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' }}
@@ -1298,15 +1382,18 @@ function App() {
         }
       />
 
-      {/* Route Kelola Admin */}
+      {/* Route A.Panel */}
       <Route
-        path="/admin/manage"
+        path="/admin/apanel"
         element={
           <ProtectedRoute>
             {renderMainLayout()}
           </ProtectedRoute>
         }
       />
+
+      {/* Legacy route /admin/manage mapped to /admin/apanel */}
+      <Route path="/admin/manage" element={<Navigate to="/admin/apanel" replace />} />
 
       {/* Protected Routes untuk /admin/* */}
       <Route

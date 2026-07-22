@@ -192,22 +192,33 @@ h1, h2, h3 {
   list-style: none;
   display: flex;
   justify-content: center;
-  margin: 0;
-  padding: 0;
-  max-width: 1300px;
+  align-items: center;
+  flex-wrap: nowrap;
   margin: 0 auto;
+  padding: 0 10px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.nav-links::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-links > li {
   position: relative;
-  padding: 20px 25px;
+  padding: 16px 14px;
   color: var(--white);
   cursor: pointer;
   transition: var(--transition);
   font-weight: 500;
-  font-size: 1rem;
-  letter-spacing: 0.8px;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .nav-links > li:hover, .nav-links > li.active {
@@ -529,10 +540,19 @@ button {
 }
 
 /* RESPONSIVE DESIGN CONSOLIDATED */
+@media (max-width: 1200px) {
+  .nav-links > li {
+    padding: 14px 10px;
+    font-size: 0.88rem;
+    letter-spacing: 0.3px;
+  }
+}
+
 @media (max-width: 1024px) {
   .nav-links > li {
-    padding: 15px;
-    font-size: 0.85rem;
+    padding: 12px 8px;
+    font-size: 0.82rem;
+    letter-spacing: 0.2px;
   }
 }
 

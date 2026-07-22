@@ -181,39 +181,60 @@ export const base64ToBlob = (base64: string, contentType: string): Blob => {
 };
 
 /**
- * Mengompres dan mengunggah gambar base64 ke Supabase Cloud Storage
- * @param base64Str string base64 gambar
- * @returns Promise<string> Public URL dari file yang diunggah
+ * Mengompres dan mengunggah gambar base64 atau File ke Supabase Cloud Storage
+ * @param input string base64 gambar atau File object
+ * @returns Promise<string> Public URL (dengan ImageKit Proxy) dari file yang diunggah
  */
-export const uploadImageToCloud = async (base64Str: string): Promise<string> => {
-  if (!base64Str.startsWith('data:image')) {
-    return base64Str;
-  }
+export const uploadImageToCloud = async (input: string | File): Promise<string> => {
+  if (typeof input === 'string') {
+    if (!input.startsWith('data:image')) {
+      return toImageKitUrl(input);
+    }
 
-  // 1. Ekstrak content type
-  const match = base64Str.match(/^data:(image\/[a-zA-Z+]+);base64,/);
-  const contentType = match ? match[1] : 'image/jpeg';
-  
-  // 2. Ubah base64 ke Blob
-  const blob = base64ToBlob(base64Str, contentType);
-  
-  // 3. Nama file unik dengan prefix folder images/
-  const extension = contentType.split('/')[1] || 'jpg';
-  const fileName = `images/img_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${extension}`;
-  
-  // 4. Upload ke bucket 'beranda-pdf' di Supabase
-  const { error } = await supabase.storage
-    .from('beranda-pdf')
-    .upload(fileName, blob, { contentType, upsert: true });
+    // 1. Ekstrak content type
+    const match = input.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+    const contentType = match ? match[1] : 'image/jpeg';
     
-  if (error) {
-    throw new Error('Gagal mengunggah gambar ke cloud storage: ' + error.message);
+    // 2. Ubah base64 ke Blob
+    const blob = base64ToBlob(input, contentType);
+    
+    // 3. Nama file unik dengan prefix folder images/
+    const extension = contentType.split('/')[1] || 'jpg';
+    const fileName = `images/img_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${extension}`;
+    
+    // 4. Upload ke bucket 'beranda-pdf' di Supabase
+    const { error } = await supabase.storage
+      .from('beranda-pdf')
+      .upload(fileName, blob, { contentType, upsert: true });
+      
+    if (error) {
+      throw new Error('Gagal mengunggah gambar ke cloud storage: ' + error.message);
+    }
+    
+    // 5. Dapatkan public URL dan bungkus dengan toImageKitUrl
+    const { data: { publicUrl } } = supabase.storage
+      .from('beranda-pdf')
+      .getPublicUrl(fileName);
+      
+    return toImageKitUrl(publicUrl);
+  } else {
+    // Handling File object
+    const contentType = input.type || 'image/jpeg';
+    const extension = input.name.split('.').pop() || 'jpg';
+    const fileName = `images/img_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${extension}`;
+
+    const { error } = await supabase.storage
+      .from('beranda-pdf')
+      .upload(fileName, input, { contentType, upsert: true });
+
+    if (error) {
+      throw new Error('Gagal mengunggah file gambar ke cloud storage: ' + error.message);
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('beranda-pdf')
+      .getPublicUrl(fileName);
+
+    return toImageKitUrl(publicUrl);
   }
-  
-  // 5. Dapatkan public URL
-  const { data: { publicUrl } } = supabase.storage
-    .from('beranda-pdf')
-    .getPublicUrl(fileName);
-    
-  return publicUrl;
 };
