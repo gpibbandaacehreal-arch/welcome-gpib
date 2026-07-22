@@ -9,6 +9,7 @@ import DownloadProposal from './components/DownloadProposal'
 import { supabase, type SupabaseProposal } from './services/supabase'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
+import { normalizeSubMenuKey, getSubMenuDisplayName } from './utils/menuUtils'
 
 
 // Types
@@ -301,28 +302,37 @@ function App() {
       setEditLogo(siteContent.settings?.logo || '')
       setEditBerandaPdf(siteContent.settings?.berandaPdf || '')
       
-      const pageData = siteContent.pages?.[activeTab] || {
-        title: activeTab === 'PA' ? 'Pelayanan Anak (PA)' :
-               activeTab === 'PT' ? 'Pelayanan Taruna (PT)' :
-               activeTab === 'GP' ? 'Gerakan Pemuda (GP)' :
-               activeTab === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
-               activeTab === 'PKP' ? 'Persekutuan Kaum Perempuan (PKP)' : activeTab,
+      const pageKey = normalizeSubMenuKey(activeTab) || activeTab;
+      const pageData = siteContent.pages?.[pageKey] || siteContent.pages?.[activeTab] || {
+        title: pageKey === 'PA' ? 'Pelayanan Anak (PA)' :
+               pageKey === 'PT' ? 'Pelayanan Taruna (PT)' :
+               pageKey === 'GP' ? 'Gerakan Pemuda (GP)' :
+               pageKey === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
+               pageKey === 'PKP' ? 'Persekutuan Kaum Perempuan (PKP)' :
+               pageKey === 'GermasaLH' ? 'GermasaLH' :
+               pageKey === 'PG' ? 'Komisi Pembangunan Gereja (PG)' :
+               pageKey === 'Inforkom-Litbang' ? 'Inforkom-Litbang' : activeTab,
         content: `<p>Informasi & Kegiatan ${activeTab} GPIB Banda Aceh.</p>`
       };
 
       setEditTitle(pageData.title || '')
       setEditContent(pageData.content || '')
     }
-  }, [isLoggedIn, activeTab, siteContent])
+  }, [isLoggedIn, activeTab])
 
   useEffect(() => {
     if (location.pathname === '/admin/manage') {
       setActiveTab('KelolaAdmin');
     } else if (location.pathname.startsWith('/admin/submenu/')) {
-      const subId = location.pathname.replace('/admin/submenu/', '');
+      const rawSubId = location.pathname.replace('/admin/submenu/', '');
+      const subId = normalizeSubMenuKey(rawSubId);
       if (subId) setActiveTab(subId);
-    } else if (isLoggedIn && profile?.sub_menu_id && (location.pathname === '/admin' || location.pathname === '/login')) {
-      setActiveTab(String(profile.sub_menu_id));
+    } else if (isLoggedIn && (profile?.sub_menu || profile?.sub_menu_id) && (location.pathname === '/admin' || location.pathname === '/login')) {
+      const userSubKey = normalizeSubMenuKey(profile?.sub_menu || profile?.sub_menu_id);
+      if (userSubKey) {
+        setActiveTab(userSubKey);
+        navigate(`/admin/submenu/${userSubKey}`);
+      }
     }
   }, [location.pathname, isLoggedIn, profile])
 
@@ -335,18 +345,19 @@ function App() {
   const saveChanges = async (updatedData?: any) => {
     setIsSaving(true)
     
-    const finalTitle = updatedData?.title || editTitle
-    const finalContent = updatedData?.content || editContent
-    const finalSiteTitle = updatedData?.siteTitle || editSiteTitle
-    const finalLogo = updatedData?.siteLogo || editLogo
-    const finalBerandaPdf = updatedData?.berandaPdf || editBerandaPdf
+    const pageKey = normalizeSubMenuKey(activeTab) || activeTab;
+    const finalTitle = updatedData?.title !== undefined ? updatedData.title : editTitle
+    const finalContent = updatedData?.content !== undefined ? updatedData.content : editContent
+    const finalSiteTitle = updatedData?.siteTitle !== undefined ? updatedData.siteTitle : editSiteTitle
+    const finalLogo = updatedData?.siteLogo !== undefined ? updatedData.siteLogo : editLogo
+    const finalBerandaPdf = updatedData?.berandaPdf !== undefined ? updatedData.berandaPdf : editBerandaPdf
     
     const newContent = {
       ...siteContent,
       settings: { logo: finalLogo, title: finalSiteTitle, berandaPdf: finalBerandaPdf },
       pages: {
         ...siteContent.pages,
-        [activeTab]: { title: finalTitle, content: finalContent }
+        [pageKey]: { title: finalTitle, content: finalContent }
       }
     }
     
@@ -1033,14 +1044,13 @@ function App() {
     if (activeTab === 'Login' && !isLoggedIn) {
       return (
         <LoginForm onLoginSuccess={(prof) => {
-          const targetSubMenu = prof?.sub_menu_id || prof?.sub_menu?.name || prof?.sub_menu?.slug;
-          if (prof?.role === 'super_admin' || !targetSubMenu) {
+          const userSubKey = normalizeSubMenuKey(prof?.sub_menu || prof?.sub_menu_id);
+          if (prof?.role === 'super_admin' || !userSubKey) {
             setActiveTab('KelolaAdmin');
             navigate('/admin/manage');
           } else {
-            const subStr = String(targetSubMenu);
-            setActiveTab(subStr);
-            navigate(`/admin/submenu/${subStr}`);
+            setActiveTab(userSubKey);
+            navigate(`/admin/submenu/${userSubKey}`);
           }
         }} />
       )
@@ -1062,22 +1072,30 @@ function App() {
       )
     }
 
-    const currentPage = siteContent.pages[activeTab] || {
-      title: activeTab === 'PA' ? 'Pelayanan Anak (PA)' :
-             activeTab === 'PT' ? 'Pelayanan Taruna (PT)' :
-             activeTab === 'GP' ? 'Gerakan Pemuda (GP)' :
-             activeTab === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
-             activeTab === 'PKP' ? 'Persekutuan Kaum Perempuan (PKP)' :
-             activeTab === 'GermasaLH' ? 'GermasaLH' :
-             activeTab === 'PG' ? 'Komisi Pembangunan Gereja (PG)' :
-             activeTab === 'Inforkom-Litbang' ? 'Inforkom-Litbang' : activeTab,
+    const pageKey = normalizeSubMenuKey(activeTab) || activeTab;
+    const currentPage = siteContent.pages[pageKey] || siteContent.pages[activeTab] || {
+      title: pageKey === 'PA' ? 'Pelayanan Anak (PA)' :
+             pageKey === 'PT' ? 'Pelayanan Taruna (PT)' :
+             pageKey === 'GP' ? 'Gerakan Pemuda (GP)' :
+             pageKey === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
+             pageKey === 'PKP' ? 'Persekutuan Kaum Perempuan (PKP)' :
+             pageKey === 'GermasaLH' ? 'GermasaLH' :
+             pageKey === 'PG' ? 'Komisi Pembangunan Gereja (PG)' :
+             pageKey === 'Inforkom-Litbang' ? 'Inforkom-Litbang' : activeTab,
       content: `<p>Informasi & Kegiatan ${activeTab} GPIB Banda Aceh.</p>`
     };
+
+    const userSubKey = normalizeSubMenuKey(profile?.sub_menu || profile?.sub_menu_id);
+    const isSuperAdmin = profile?.role === 'super_admin';
+    const canEditCurrentPage = isLoggedIn && (
+      isSuperAdmin || 
+      (userSubKey && pageKey.toLowerCase() === userSubKey.toLowerCase())
+    );
 
     if (activeTab === 'Beranda') {
       return (
         <div className="page-content">
-          {!isLoggedIn ? (
+          {!canEditCurrentPage ? (
             <div className="page-card">
               <h2>{currentPage.title}</h2>
               <div 
@@ -1131,7 +1149,7 @@ function App() {
 
     return (
       <div className="page-content">
-        {!isLoggedIn ? (
+        {!canEditCurrentPage ? (
           <div className="page-card">
             <h2>{currentPage.title}</h2>
             <div 
@@ -1247,7 +1265,7 @@ function App() {
                 style={{ color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' }}
                 onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
               >
-                Logout {profile?.sub_menu_id || profile?.sub_menu?.name || (profile?.role === 'super_admin' ? 'Admin' : '')}
+                Logout {profile?.role === 'super_admin' ? 'Admin' : (getSubMenuDisplayName(profile?.sub_menu || profile?.sub_menu_id) || 'Admin')}
               </li>
             </>
           ) : (

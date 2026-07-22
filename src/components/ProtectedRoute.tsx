@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { normalizeSubMenuKey } from '../utils/menuUtils';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -48,8 +49,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   }
 
   const role = profile?.role;
-  const userSubMenuId = profile?.sub_menu_id;
-  const subMenuSlug = profile?.sub_menu?.slug || profile?.sub_menu?.name || profile?.sub_menu?.title;
+  const userSubKey = normalizeSubMenuKey(profile?.sub_menu || profile?.sub_menu_id);
 
   // 2. Role = super_admin -> Bebas akses ke semua /admin/*
   if (role === 'super_admin') {
@@ -60,15 +60,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   if (role === 'admin_pelkat' || role === 'admin_komisi') {
     const currentTarget = requiredSubMenuId || params.subMenuId || params.tab;
 
-    if (currentTarget && userSubMenuId) {
-      const isMatch =
-        String(currentTarget).toLowerCase() === String(userSubMenuId).toLowerCase() ||
-        (subMenuSlug && String(currentTarget).toLowerCase() === String(subMenuSlug).toLowerCase());
+    if (currentTarget && userSubKey) {
+      const targetSubKey = normalizeSubMenuKey(currentTarget);
+      const isMatch = targetSubKey.toLowerCase() === userSubKey.toLowerCase();
 
       // Jika mencoba membuka sub_menu admin lain -> Redirect balik ke miliknya
       if (!isMatch) {
-        const redirectTarget = subMenuSlug ? `/admin/submenu/${subMenuSlug}` : `/admin/submenu/${userSubMenuId}`;
-        return <Navigate to={redirectTarget} replace />;
+        return <Navigate to={`/admin/submenu/${userSubKey}`} replace />;
       }
     }
 
