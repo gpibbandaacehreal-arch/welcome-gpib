@@ -4,6 +4,7 @@ import './App.css'
 import LoginForm from './components/LoginForm'
 import { authService } from './services/auth'
 import AdminDashboard from './components/AdminDashboard'
+import AdminManagement from './components/AdminManagement'
 import { compressImage, toImageKitUrl, filterHtmlImages, uploadImageToCloud } from './utils/imageUtils'
 import DownloadProposal from './components/DownloadProposal'
 import { supabase, type SupabaseProposal } from './services/supabase'
@@ -14,7 +15,8 @@ import ProtectedRoute from './components/ProtectedRoute'
 // Types
 type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Organisasi Gereja' | 'Data Umat' | 'Download' | 'Login' 
   | 'PA' | 'PT' | 'GP' | 'PKB' | 'PKP' 
-  | 'GermasaLH' | 'PG' | 'Inforkom-Litbang';
+  | 'GermasaLH' | 'PG' | 'Inforkom-Litbang' | 'KelolaAdmin';
+
 
 interface ContentBlock {
   type: 'text' | 'image';
@@ -1006,6 +1008,10 @@ function App() {
   };
 
   const renderPage = () => {
+    if (activeTab === 'KelolaAdmin' || location.pathname === '/admin/manage') {
+      return <AdminManagement onLogout={handleLogout} />;
+    }
+
     if (activeTab === 'Login' && !isLoggedIn) {
       return (
         <LoginForm onLoginSuccess={(prof) => {
@@ -1199,7 +1205,12 @@ function App() {
           </li>
 
           {isLoggedIn ? (
-            <li onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}>Logout (Admin)</li>
+            <li 
+              className={activeTab === 'KelolaAdmin' || location.pathname === '/admin/manage' ? 'active' : ''}
+              onClick={() => { setActiveTab('KelolaAdmin'); setIsMobileMenuOpen(false); navigate('/admin/manage'); }}
+            >
+              Kelola Admin
+            </li>
           ) : (
             <li 
               className={activeTab === 'Login' ? 'active' : ''} 
@@ -1246,6 +1257,16 @@ function App() {
           ) : (
             renderMainLayout()
           )
+        }
+      />
+
+      {/* Route Kelola Admin */}
+      <Route
+        path="/admin/manage"
+        element={
+          <ProtectedRoute>
+            {renderMainLayout()}
+          </ProtectedRoute>
         }
       />
 
