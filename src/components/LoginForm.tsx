@@ -35,7 +35,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 
   return (
     <div className="login-container">
-      <h2>Login Admin</h2>
+      <h2>Login Super Admin</h2>
       
       {error && (
         <div style={{ 
@@ -57,58 +57,64 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       )}
 
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
+        <div className="form-group" style={{ marginBottom: '16px' }}>
+          <label style={{ marginBottom: '6px', fontSize: '0.95rem', fontWeight: 600, display: 'block', textAlign: 'left' }}>Username / Email</label>
           <input 
-            type="email" 
-            placeholder="Email Admin" 
+            type="text" 
+            placeholder="Masukkan Username" 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={isLoading}
             required 
-            autoComplete="email"
+            autoComplete="username"
+            style={{ width: '100%', boxSizing: 'border-box', height: '48px', padding: '12px 15px', fontSize: '1rem', borderRadius: '6px', border: '1px solid #ddd' }}
           />
         </div>
         
-        <div className="password-input-wrapper" style={{ position: 'relative' }}>
-          <input 
-            type={showPassword ? "text" : "password"} 
-            placeholder="Password" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={isLoading}
-            required 
-            autoComplete="current-password"
-            style={{ width: '100%', paddingRight: '45px' }}
-          />
-          <button 
-            type="button" 
-            className="toggle-password-btn"
-            onClick={() => setShowPassword(!showPassword)}
-            style={{
-              position: 'absolute',
-              right: '10px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '5px',
-              fontSize: '1.2rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 2,
-              width: 'auto',
-              marginTop: 0
-            }}
-            title={showPassword ? "Sembunyikan Password" : "Tampilkan Password"}
-            disabled={isLoading}
-          >
-            {showPassword ? '👁️‍🗨️' : '👁️'}
-          </button>
+        <div className="form-group" style={{ marginBottom: '16px', width: '100%' }}>
+          <label style={{ marginBottom: '6px', fontSize: '0.95rem', fontWeight: 600, display: 'block', textAlign: 'left' }}>Password</label>
+          <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
+            <input 
+              type={showPassword ? "text" : "password"} 
+              placeholder="Masukkan Password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              required 
+              autoComplete="current-password"
+              style={{ width: '100%', boxSizing: 'border-box', height: '48px', padding: '12px 45px 12px 15px', fontSize: '1rem', borderRadius: '6px', border: '1px solid #ddd' }}
+            />
+            <button 
+              type="button" 
+              className="toggle-password-btn"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                fontSize: '1.2rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2,
+                width: 'auto',
+                height: 'auto',
+                marginTop: 0
+              }}
+              title={showPassword ? "Sembunyikan Password" : "Tampilkan Password"}
+              disabled={isLoading}
+            >
+              {showPassword ? '👁️‍🗨️' : '👁️'}
+            </button>
+          </div>
         </div>
         
-        <button type="submit" disabled={isLoading} style={{ width: '100%', marginTop: '10px' }}>
+        <button type="submit" disabled={isLoading} style={{ width: '100%', height: '48px', marginTop: '10px', fontSize: '1rem', fontWeight: 600 }}>
           {isLoading ? (
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               <span className="loader-small"></span> Memproses...
@@ -121,4 +127,3 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 };
 
 export default LoginForm;
-

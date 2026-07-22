@@ -9,7 +9,7 @@ import DownloadProposal from './components/DownloadProposal'
 import { supabase, type SupabaseProposal } from './services/supabase'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
-import { normalizeSubMenuKey, getSubMenuDisplayName } from './utils/menuUtils'
+import { normalizeSubMenuKey } from './utils/menuUtils'
 
 
 // Types
@@ -1036,6 +1036,7 @@ function App() {
     }
   };
 
+
   const renderPage = () => {
     if (activeTab === 'KelolaAdmin' || location.pathname === '/admin/manage') {
       return <AdminManagement onLogout={handleLogout} />;
@@ -1043,15 +1044,9 @@ function App() {
 
     if (activeTab === 'Login' && !isLoggedIn) {
       return (
-        <LoginForm onLoginSuccess={(prof) => {
-          const userSubKey = normalizeSubMenuKey(prof?.sub_menu || prof?.sub_menu_id);
-          if (prof?.role === 'super_admin' || !userSubKey) {
-            setActiveTab('KelolaAdmin');
-            navigate('/admin/manage');
-          } else {
-            setActiveTab(userSubKey);
-            navigate(`/admin/submenu/${userSubKey}`);
-          }
+        <LoginForm onLoginSuccess={() => {
+          setActiveTab('Beranda');
+          navigate('/');
         }} />
       )
     }
@@ -1085,12 +1080,7 @@ function App() {
       content: `<p>Informasi & Kegiatan ${activeTab} GPIB Banda Aceh.</p>`
     };
 
-    const userSubKey = normalizeSubMenuKey(profile?.sub_menu || profile?.sub_menu_id);
-    const isSuperAdmin = profile?.role === 'super_admin';
-    const canEditCurrentPage = isLoggedIn && (
-      isSuperAdmin || 
-      (userSubKey && pageKey.toLowerCase() === userSubKey.toLowerCase())
-    );
+    const canEditCurrentPage = isLoggedIn;
 
     if (activeTab === 'Beranda') {
       return (
@@ -1226,19 +1216,19 @@ function App() {
               <li className="dropdown-submenu">
                 <span>Pelayanan Kategorial (PELKAT) ▸</span>
                 <ul className="submenu-list">
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PA'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/PA' : '/'); }}>Pelayanan Anak (PA)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PT'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/PT' : '/'); }}>Pelayanan Taruna (PT)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/GP' : '/'); }}>Gerakan Pemuda (GP)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKB'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/PKB' : '/'); }}>Persekutuan Kaum Bapak (PKB)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/PKP' : '/'); }}>Persekutuan Kaum Perempuan (PKP)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PA'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Pelayanan Anak (PA)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PT'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Pelayanan Taruna (PT)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Gerakan Pemuda (GP)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKB'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Bapak (PKB)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Perempuan (PKP)</li>
                 </ul>
               </li>
               <li className="dropdown-submenu">
                 <span>KOMISI ▸</span>
                 <ul className="submenu-list">
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GermasaLH'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/GermasaLH' : '/'); }}>GermasaLH (Gereja, Masyarakat, Agama, Lingkungan Hidup)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PG'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/PG' : '/'); }}>PG (Pembangunan Gereja)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('Inforkom-Litbang'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate(isLoggedIn ? '/admin/submenu/Inforkom-Litbang' : '/'); }}>Inforkom-Litbang (Info, Orga, Kom, Litbang)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GermasaLH'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>GermasaLH (Gereja, Masyarakat, Agama, Lingkungan Hidup)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PG'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>PG (Pembangunan Gereja)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('Inforkom-Litbang'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Inforkom-Litbang (Info, Orga, Kom, Litbang)</li>
                 </ul>
               </li>
             </ul>
@@ -1253,19 +1243,17 @@ function App() {
 
           {isLoggedIn ? (
             <>
-              {profile?.role === 'super_admin' && (
-                <li 
-                  className={activeTab === 'KelolaAdmin' || location.pathname === '/admin/manage' ? 'active' : ''}
-                  onClick={() => { setActiveTab('KelolaAdmin'); setIsMobileMenuOpen(false); navigate('/admin/manage'); }}
-                >
-                  Kelola Admin
-                </li>
-              )}
+              <li 
+                className={activeTab === 'KelolaAdmin' || location.pathname === '/admin/manage' ? 'active' : ''}
+                onClick={() => { setActiveTab('KelolaAdmin'); setIsMobileMenuOpen(false); navigate('/admin/manage'); }}
+              >
+                Kelola Admin
+              </li>
               <li 
                 style={{ color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' }}
                 onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
               >
-                Logout {profile?.role === 'super_admin' ? 'Admin' : (getSubMenuDisplayName(profile?.sub_menu || profile?.sub_menu_id) || 'Admin')}
+                🚪 Logout Admin
               </li>
             </>
           ) : (
@@ -1303,14 +1291,7 @@ function App() {
         path="/login"
         element={
           isLoggedIn ? (
-            <Navigate
-              to={
-                profile?.role === 'super_admin'
-                  ? '/admin/manage'
-                  : `/admin/submenu/${normalizeSubMenuKey(profile?.sub_menu || profile?.sub_menu_id) || 'PA'}`
-              }
-              replace
-            />
+            <Navigate to="/" replace />
           ) : (
             renderMainLayout()
           )
