@@ -214,14 +214,20 @@ function App() {
 
         // SAFETY: Only update if the incoming data actually contains records
         // This prevents overwriting with empty arrays if the script fails to fetch records
-        const mergedContent = {
-          ...siteContent, // Start with current content
-          settings: data.settings ? { ...DEFAULT_CONTENT.settings, ...data.settings } : siteContent.settings,
-          pages: data.pages ? { ...DEFAULT_CONTENT.pages, ...migratedPages } : siteContent.pages,
-          umat: (data.umat && data.umat.length > 0) ? data.umat : siteContent.umat
-        }
-        
         setSiteContent(prev => {
+          const mergedSettings = {
+            ...DEFAULT_CONTENT.settings,
+            ...(data.settings || {}),
+            ...prev.settings
+          };
+
+          const mergedContent = {
+            ...prev,
+            settings: mergedSettings,
+            pages: data.pages ? { ...DEFAULT_CONTENT.pages, ...migratedPages } : prev.pages,
+            umat: (data.umat && data.umat.length > 0) ? data.umat : prev.umat
+          };
+
           const isSameUmat = JSON.stringify(prev.umat) === JSON.stringify(mergedContent.umat);
           const isSamePages = JSON.stringify(prev.pages) === JSON.stringify(mergedContent.pages);
           const isSameSettings = JSON.stringify(prev.settings) === JSON.stringify(mergedContent.settings);
@@ -334,20 +340,31 @@ function App() {
   }, []);
 
   const handleSaveSettings = async (newSettings: SiteSettings) => {
-    await siteSettingsService.saveSettings(newSettings);
-    setSiteContent(prev => ({
-      ...prev,
-      settings: {
-        ...prev.settings,
-        ...newSettings
-      }
-    }));
+    const updatedContent = {
+      ...siteContent,
+      settings: newSettings
+    };
+
+    setSiteContent(updatedContent);
+
     try {
-      localStorage.setItem('gpibSiteContent', JSON.stringify({
-        ...siteContent,
-        settings: newSettings
-      }));
+      localStorage.setItem('gpibSiteContent', JSON.stringify(updatedContent));
+      localStorage.setItem('gpib_site_settings', JSON.stringify(newSettings));
     } catch (e) {}
+
+    await siteSettingsService.saveSettings(newSettings);
+
+    try {
+      const payload = JSON.stringify({ action: 'updateContent', data: updatedContent });
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: payload,
+      });
+    } catch (err) {
+      console.error('Gagal mempublikasi kustomisasi ke Google Drive:', err);
+    }
   };
 
   useEffect(() => {
@@ -1245,6 +1262,7 @@ function App() {
     fontSize: siteContent.settings.navFontSize || undefined,
     fontWeight: siteContent.settings.navFontWeight || undefined,
     color: siteContent.settings.navTextColor || undefined,
+    ['--nav-bg' as any]: siteContent.settings.navBgColor || '#1b3a2a',
   };
 
   const renderMainLayout = () => (
@@ -1281,7 +1299,7 @@ function App() {
             <ul className="dropdown-menu">
               <li onClick={() => { setActiveTab('Organisasi Gereja'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Struktur Organisasi</li>
               <li className="dropdown-submenu">
-                <span>Pelayanan Kategorial (PELKAT) ▸</span>
+                <span>PELKAT ▸</span>
                 <ul className="submenu-list">
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PA'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Pelayanan Anak (PA)</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PT'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Pelayanan Taruna (PT)</li>
@@ -1296,9 +1314,9 @@ function App() {
               <li className="dropdown-submenu">
                 <span>KOMISI ▸</span>
                 <ul className="submenu-list">
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GermasaLH'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>GermasaLH (Gereja, Masyarakat, Agama, Lingkungan Hidup)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PG'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>PG (Pembangunan Gereja)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('Inforkom-Litbang'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Inforkom-Litbang (Info, Orga, Kom, Litbang)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GermasaLH'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>GermasaLH</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PG'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Komisi PG</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('Inforkom-Litbang'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Inforkom-Litbang</li>
                   {customKomisiMenus.map(m => (
                     <li key={m.id} onClick={(e) => { e.stopPropagation(); setActiveTab(m.name); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>{m.name}</li>
                   ))}

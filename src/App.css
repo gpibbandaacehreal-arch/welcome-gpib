@@ -185,7 +185,6 @@ h1, h2, h3 {
   width: 100%;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  background-color: rgba(27, 58, 42, 0.95);
 }
 
 .nav-links {
@@ -197,10 +196,9 @@ h1, h2, h3 {
   margin: 0 auto;
   padding: 0 10px;
   width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  max-width: 1200px;
+  overflow: visible;
+  background-color: transparent;
 }
 
 .nav-links::-webkit-scrollbar {
@@ -209,13 +207,13 @@ h1, h2, h3 {
 
 .nav-links > li {
   position: relative;
-  padding: 16px 14px;
+  padding: 14px 10px;
   color: var(--white);
   cursor: pointer;
   transition: var(--transition);
   font-weight: 500;
-  font-size: 0.95rem;
-  letter-spacing: 0.5px;
+  font-size: 0.88rem;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
   white-space: nowrap;
   flex-shrink: 0;
@@ -243,44 +241,52 @@ h1, h2, h3 {
   top: 100%;
   left: 0;
   background-color: var(--nav-bg);
-  min-width: 260px;
-  box-shadow: var(--shadow-lg);
+  min-width: 240px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
   list-style: none;
-  padding: 10px 0;
+  padding: 8px 0;
   margin: 0;
-  border-top: 2px solid var(--secondary-color);
+  border-top: 3px solid var(--secondary-color, #d4af37);
+  border-radius: 0 0 8px 8px;
+  z-index: 1050;
+  text-transform: none;
 }
 
 .dropdown-menu li {
-  padding: 12px 20px;
+  padding: 10px 18px;
   color: var(--white);
   transition: var(--transition);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  white-space: nowrap;
 }
 
 .dropdown-menu li:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.15);
   color: var(--secondary-color);
-  padding-left: 25px;
+  padding-left: 22px;
 }
 
 .dropdown-submenu {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  cursor: pointer;
 }
 
 .submenu-list {
   display: none;
   position: absolute;
   left: 100%;
-  top: -10px;
+  top: 0;
   background-color: var(--nav-bg);
-  min-width: 280px;
-  box-shadow: var(--shadow-lg);
+  min-width: 240px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
   list-style: none;
-  padding: 10px 0;
-  border-left: 2px solid var(--secondary-color);
+  padding: 8px 0;
+  border-left: 3px solid var(--secondary-color, #d4af37);
+  border-radius: 0 8px 8px 8px;
+  z-index: 1100;
 }
 
 /* Main Content */

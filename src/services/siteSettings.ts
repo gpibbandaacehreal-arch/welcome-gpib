@@ -52,76 +52,71 @@ const LOCAL_STORAGE_KEY = 'gpib_site_settings';
 
 export const siteSettingsService = {
   /**
-   * Fetch site settings from Supabase (with fallback to localStorage / default values)
+   * Fetch site settings from localStorage / Supabase (with fallback to default values)
    */
   getSettings: async (): Promise<SiteSettings> => {
-    try {
-      // 1. Try to load from Supabase site_settings table
-      const { data, error } = await supabase
-        .from('site_settings')
-        .select('*')
-        .eq('id', 'default')
-        .maybeSingle();
-
-      if (!error && data) {
-        const settings: SiteSettings = {
-          logo: toImageKitUrl(data.logo || DEFAULT_SITE_SETTINGS.logo),
-          title: data.title || DEFAULT_SITE_SETTINGS.title,
-          berandaPdf: data.beranda_pdf || '',
-          headerFontFamily: data.header_font_family || DEFAULT_SITE_SETTINGS.headerFontFamily,
-          headerFontSize: data.header_font_size || DEFAULT_SITE_SETTINGS.headerFontSize,
-          headerTextColor: data.header_text_color || DEFAULT_SITE_SETTINGS.headerTextColor,
-          headerBgImage: data.header_bg_image ? toImageKitUrl(data.header_bg_image) : '',
-          headerBgOverlay: data.header_bg_overlay || DEFAULT_SITE_SETTINGS.headerBgOverlay,
-          headerHeight: data.header_height || DEFAULT_SITE_SETTINGS.headerHeight,
-          navFontFamily: data.nav_font_family || DEFAULT_SITE_SETTINGS.navFontFamily,
-          navFontSize: data.nav_font_size || DEFAULT_SITE_SETTINGS.navFontSize,
-          navFontWeight: data.nav_font_weight || DEFAULT_SITE_SETTINGS.navFontWeight,
-          navBgColor: data.nav_bg_color || DEFAULT_SITE_SETTINGS.navBgColor,
-          navTextColor: data.nav_text_color || DEFAULT_SITE_SETTINGS.navTextColor,
-          primaryColor: data.primary_color || DEFAULT_SITE_SETTINGS.primaryColor,
-          customMenus: Array.isArray(data.custom_menus) ? data.custom_menus : []
-        };
-        // Backup to localStorage
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settings));
-        return settings;
-      }
-    } catch (err) {
-      console.warn('Unable to load site settings from Supabase, falling back to local cache.', err);
-    }
-
-    // 2. Fallback to localStorage
+    // 1. Read from localStorage first for instant local cache
+    let cachedSettings: Partial<SiteSettings> = {};
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        return { ...DEFAULT_SITE_SETTINGS, ...parsed };
-      } catch (e) {
-        // ignore
-      }
+        cachedSettings = JSON.parse(saved);
+      } catch (e) {}
     }
 
-    return DEFAULT_SITE_SETTINGS;
+    try {
+      // 2. Try to sync from Supabase if table exists
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data) {
+        const remoteSettings: SiteSettings = {
+          logo: toImageKitUrl(data.logo || cachedSettings.logo || DEFAULT_SITE_SETTINGS.logo),
+          title: data.title || cachedSettings.title || DEFAULT_SITE_SETTINGS.title,
+          berandaPdf: data.beranda_pdf || cachedSettings.berandaPdf || '',
+          headerFontFamily: data.header_font_family || cachedSettings.headerFontFamily || DEFAULT_SITE_SETTINGS.headerFontFamily,
+          headerFontSize: data.header_font_size || cachedSettings.headerFontSize || DEFAULT_SITE_SETTINGS.headerFontSize,
+          headerTextColor: data.header_text_color || cachedSettings.headerTextColor || DEFAULT_SITE_SETTINGS.headerTextColor,
+          headerBgImage: data.header_bg_image ? toImageKitUrl(data.header_bg_image) : (cachedSettings.headerBgImage || ''),
+          headerBgOverlay: data.header_bg_overlay || cachedSettings.headerBgOverlay || DEFAULT_SITE_SETTINGS.headerBgOverlay,
+          headerHeight: data.header_height || cachedSettings.headerHeight || DEFAULT_SITE_SETTINGS.headerHeight,
+          navFontFamily: data.nav_font_family || cachedSettings.navFontFamily || DEFAULT_SITE_SETTINGS.navFontFamily,
+          navFontSize: data.nav_font_size || cachedSettings.navFontSize || DEFAULT_SITE_SETTINGS.navFontSize,
+          navFontWeight: data.nav_font_weight || cachedSettings.navFontWeight || DEFAULT_SITE_SETTINGS.navFontWeight,
+          navBgColor: data.nav_bg_color || cachedSettings.navBgColor || DEFAULT_SITE_SETTINGS.navBgColor,
+          navTextColor: data.nav_text_color || cachedSettings.navTextColor || DEFAULT_SITE_SETTINGS.navTextColor,
+          primaryColor: data.primary_color || cachedSettings.primaryColor || DEFAULT_SITE_SETTINGS.primaryColor,
+          customMenus: Array.isArray(data.custom_menus) ? data.custom_menus : (cachedSettings.customMenus || [])
+        };
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(remoteSettings));
+        return remoteSettings;
+      }
+    } catch (err) {
+      console.warn('Unable to load site settings from Supabase, using local cache.', err);
+    }
+
+    return { ...DEFAULT_SITE_SETTINGS, ...cachedSettings };
   },
 
   /**
-   * Save site settings to Supabase and update localStorage
+   * Save site settings to localStorage and Supabase
    */
   saveSettings: async (newSettings: SiteSettings): Promise<void> => {
-    // Process all images through ImageKit Proxy
     const cleanSettings: SiteSettings = {
       ...newSettings,
       logo: toImageKitUrl(newSettings.logo),
       headerBgImage: newSettings.headerBgImage ? toImageKitUrl(newSettings.headerBgImage) : ''
     };
 
-    // Save to localStorage immediately
+    // Save to localStorage immediately so changes persist on reload
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cleanSettings));
 
     try {
-      // Upsert to Supabase site_settings table
       const dbPayload = {
-        id: 'default',
+        id: 1,
         title: cleanSettings.title,
         logo: cleanSettings.logo,
         beranda_pdf: cleanSettings.berandaPdf || '',
@@ -146,10 +141,10 @@ export const siteSettingsService = {
         .upsert([dbPayload], { onConflict: 'id' });
 
       if (error) {
-        console.warn('Supabase upsert warning for site_settings:', error.message);
+        console.warn('Supabase site_settings upsert note:', error.message);
       }
     } catch (err: any) {
-      console.warn('Saving to Supabase failed, changes stored locally.', err?.message || err);
+      console.warn('Saving to Supabase stored locally.', err?.message || err);
     }
   }
 };
