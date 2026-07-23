@@ -217,8 +217,8 @@ function App() {
         setSiteContent(prev => {
           const mergedSettings = {
             ...DEFAULT_CONTENT.settings,
-            ...(data.settings || {}),
-            ...prev.settings
+            ...prev.settings,
+            ...(data.settings || {})
           };
 
           const mergedContent = {
@@ -1251,6 +1251,7 @@ function App() {
   };
 
   const headerTitleStyle: React.CSSProperties = {
+    fontFamily: siteContent.settings.headerFontFamily || undefined,
     fontSize: siteContent.settings.headerFontSize || undefined,
     color: headerBgImage ? '#ffffff' : (siteContent.settings.headerTextColor || undefined),
     textShadow: headerBgImage ? '0 2px 8px rgba(0,0,0,0.7)' : undefined,
@@ -1265,8 +1266,13 @@ function App() {
     ['--nav-bg' as any]: siteContent.settings.navBgColor || '#1b3a2a',
   };
 
+  const appContainerStyle: React.CSSProperties = {
+    ['--primary-color' as any]: siteContent.settings.primaryColor || '#8b0000',
+    ['--nav-bg' as any]: siteContent.settings.navBgColor || '#1b3a2a',
+  };
+
   const renderMainLayout = () => (
-    <div className="app-container">
+    <div className="app-container" style={appContainerStyle}>
       <header className="header" style={headerInlineStyle}>
         <div className="logo-container">
           <img src={toImageKitUrl(siteContent.settings.logo, 400)} alt="Logo GPIB" />
