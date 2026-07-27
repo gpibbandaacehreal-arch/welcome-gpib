@@ -339,6 +339,11 @@ function App() {
     fetchSiteSettings();
   }, []);
 
+  useEffect(() => {
+    const bg = siteContent?.settings?.siteBgColor || '#ffffff';
+    document.body.style.backgroundColor = bg;
+  }, [siteContent?.settings?.siteBgColor]);
+
   const handleSaveSettings = async (newSettings: SiteSettings) => {
     const updatedContent = {
       ...siteContent,
@@ -1267,11 +1272,6 @@ function App() {
     color: siteContent.settings.navTextColor || undefined,
     ['--nav-bg' as any]: siteContent.settings.navBgColor || '#1b3a2a',
   };
-
-  useEffect(() => {
-    const bg = siteContent.settings.siteBgColor || '#ffffff';
-    document.body.style.backgroundColor = bg;
-  }, [siteContent.settings.siteBgColor]);
 
   const appContainerStyle: React.CSSProperties = {
     ['--primary-color' as any]: siteContent.settings.primaryColor || '#8b0000',
