@@ -39,10 +39,47 @@ export const authService = {
       const cleanPassword = password.trim();
       const targetLower = cleanUser.toLowerCase();
 
-      // Checks for Super Admin credentials: username admingpib / admingpib@gpib.org & password admin123
       const isSuperAdminUser = targetLower === 'admingpib' || targetLower === 'admingpib@gpib.org';
-      
-      if (isSuperAdminUser && cleanPassword === 'admin123') {
+
+      if (!isSuperAdminUser) {
+        return {
+          success: false,
+          message: 'Username atau password yang Anda masukkan salah. Hanya Super Admin (admingpib) yang memiliki hak akses.',
+        };
+      }
+
+      // SELALU login ke Supabase Auth dulu -> supaya dapat session/token ASLI
+      // (dibutuhkan supaya auth.role() = 'authenticated' terpenuhi saat upload gambar / RLS)
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: 'admingpib@gpib.org',
+        password: cleanPassword,
+      });
+
+      if (!error && data?.user) {
+        const superProfile: AdminProfile = {
+          id: data.user.id,
+          role: 'super_admin',
+          sub_menu_id: null,
+          sub_menu: null
+        };
+        localStorage.setItem('isGPBAdmin', 'true');
+        localStorage.setItem('adminToken', data.session?.access_token || 'true');
+        localStorage.setItem('adminProfile', JSON.stringify(superProfile));
+
+        return {
+          success: true,
+          token: data.session?.access_token,
+          user: data.user,
+          profile: superProfile,
+        };
+      }
+
+      // Fallback lokal HANYA dipakai kalau akun admingpib@gpib.org belum
+      // terdaftar di Supabase Auth atau server sedang tidak bisa dihubungi.
+      // Catatan: mode fallback ini TIDAK menghasilkan session asli,
+      // jadi fitur upload gambar/file ke Supabase Storage tidak akan berfungsi
+      // selama login memakai jalur ini.
+      if (cleanPassword === 'admin123') {
         const superProfile: AdminProfile = {
           id: 'super_admin_1',
           role: 'super_admin',
@@ -58,33 +95,6 @@ export const authService = {
           user: { id: 'super_admin_1', email: 'admingpib@gpib.org' },
           profile: superProfile,
         };
-      }
-
-      // Secondary check via Supabase Auth for admingpib@gpib.org
-      if (isSuperAdminUser) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: 'admingpib@gpib.org',
-          password: cleanPassword,
-        });
-
-        if (!error && data?.user) {
-          const superProfile: AdminProfile = {
-            id: data.user.id,
-            role: 'super_admin',
-            sub_menu_id: null,
-            sub_menu: null
-          };
-          localStorage.setItem('isGPBAdmin', 'true');
-          localStorage.setItem('adminToken', data.session?.access_token || 'true');
-          localStorage.setItem('adminProfile', JSON.stringify(superProfile));
-
-          return {
-            success: true,
-            token: data.session?.access_token,
-            user: data.user,
-            profile: superProfile,
-          };
-        }
       }
 
       return {
