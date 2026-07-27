@@ -1064,8 +1064,9 @@ function App() {
       throw error;
     }
     if (!data || data.length === 0) {
-      throw new Error('Gagal memperbaharui data. Anda mungkin tidak memiliki izin atau data tidak ditemukan.');
+      throw new Error('Gagal memperbaharui data. Akses (RLS) di Supabase memblokir edit. Pastikan RLS diizinkan untuk UPDATE atau matikan RLS pada tabel riwayat_download di Supabase SQL Editor.');
     }
+    await fetchSupabaseProposals();
   };
 
   const handleDeleteProposalSupabase = async (id: number) => {
@@ -1079,8 +1080,9 @@ function App() {
       throw error;
     }
     if (!data || data.length === 0) {
-      throw new Error('Gagal menghapus data. Anda mungkin tidak memiliki izin atau data tidak ditemukan.');
+      throw new Error('Gagal menghapus data. Akses (RLS) di Supabase memblokir hapus. Pastikan RLS diizinkan untuk DELETE atau matikan RLS pada tabel riwayat_download di Supabase SQL Editor.');
     }
+    await fetchSupabaseProposals();
   };
 
 
