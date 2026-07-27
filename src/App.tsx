@@ -1268,9 +1268,16 @@ function App() {
     ['--nav-bg' as any]: siteContent.settings.navBgColor || '#1b3a2a',
   };
 
+  useEffect(() => {
+    const bg = siteContent.settings.siteBgColor || '#ffffff';
+    document.body.style.backgroundColor = bg;
+  }, [siteContent.settings.siteBgColor]);
+
   const appContainerStyle: React.CSSProperties = {
     ['--primary-color' as any]: siteContent.settings.primaryColor || '#8b0000',
     ['--nav-bg' as any]: siteContent.settings.navBgColor || '#1b3a2a',
+    ['--bg-color' as any]: siteContent.settings.siteBgColor || '#ffffff',
+    backgroundColor: siteContent.settings.siteBgColor || '#ffffff',
   };
 
   const renderMainLayout = () => (

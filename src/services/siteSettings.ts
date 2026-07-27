@@ -26,6 +26,7 @@ export interface SiteSettings {
   navBgColor?: string;
   navTextColor?: string;
   primaryColor?: string;
+  siteBgColor?: string;
   customMenus?: CustomMenuItem[];
 }
 
@@ -45,6 +46,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   navBgColor: '#1b3a2a',
   navTextColor: '#ffffff',
   primaryColor: '#8b0000',
+  siteBgColor: '#ffffff',
   customMenus: []
 };
 
@@ -89,6 +91,7 @@ export const siteSettingsService = {
           navBgColor: data.nav_bg_color || cachedSettings.navBgColor || DEFAULT_SITE_SETTINGS.navBgColor,
           navTextColor: data.nav_text_color || cachedSettings.navTextColor || DEFAULT_SITE_SETTINGS.navTextColor,
           primaryColor: data.primary_color || cachedSettings.primaryColor || DEFAULT_SITE_SETTINGS.primaryColor,
+          siteBgColor: data.site_bg_color || cachedSettings.siteBgColor || DEFAULT_SITE_SETTINGS.siteBgColor,
           customMenus: Array.isArray(data.custom_menus) ? data.custom_menus : (cachedSettings.customMenus || [])
         };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(remoteSettings));
@@ -132,6 +135,7 @@ export const siteSettingsService = {
         nav_bg_color: cleanSettings.navBgColor,
         nav_text_color: cleanSettings.navTextColor,
         primary_color: cleanSettings.primaryColor,
+        site_bg_color: cleanSettings.siteBgColor,
         custom_menus: cleanSettings.customMenus || [],
         updated_at: new Date().toISOString()
       };

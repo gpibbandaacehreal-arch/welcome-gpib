@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { uploadImageToCloud, toImageKitUrl } from '../utils/imageUtils';
 import type { SiteSettings, CustomMenuItem } from '../services/siteSettings';
-import { supabase } from '../services/supabase';
 
 interface APanelProps {
   settings: SiteSettings;
@@ -49,8 +48,17 @@ const COLOR_PRESETS_NAV = [
   { name: 'Abu-abu Slate', hex: '#334155' },
 ];
 
+const COLOR_PRESETS_SITE_BG = [
+  { name: 'Putih Bersih (Default)', hex: '#ffffff' },
+  { name: 'Krem Klasik', hex: '#fdfaf5' },
+  { name: 'Abu Slate Soft', hex: '#f8fafc' },
+  { name: 'Mint Soft', hex: '#f0fdf4' },
+  { name: 'Biru Soft', hex: '#f0f9ff' },
+  { name: 'Dark Slate', hex: '#0f172a' },
+];
+
 export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'header' | 'menu' | 'theme' | 'admin'>('header');
+  const [activeTab, setActiveTab] = useState<'header' | 'menu' | 'theme'>('header');
   
   // Settings State
   const [siteTitle, setSiteTitle] = useState(settings.title || 'GPIB BANDA ACEH');
@@ -67,6 +75,7 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
   const [navBgColor, setNavBgColor] = useState(settings.navBgColor || '#1b3a2a');
   const [navTextColor, setNavTextColor] = useState(settings.navTextColor || '#ffffff');
   const [primaryColor, setPrimaryColor] = useState(settings.primaryColor || '#8b0000');
+  const [siteBgColor, setSiteBgColor] = useState(settings.siteBgColor || '#ffffff');
 
   // Custom Menu State
   const [customMenus, setCustomMenus] = useState<CustomMenuItem[]>(settings.customMenus || []);
@@ -148,25 +157,6 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
     }
   };
 
-  // Clean up pelkat/komisi accounts from Supabase
-  const handleCleanupAccounts = async () => {
-    try {
-      const { error } = await supabase
-        .from('admin_profile')
-        .delete()
-        .neq('role', 'super_admin');
-
-      if (!error) {
-        setMessage({
-          type: 'success',
-          text: 'Semua akun non-Super Admin telah dibersihkan dari database.'
-        });
-      }
-    } catch (err: any) {
-      setMessage({ type: 'error', text: 'Gagal membersihkan data akun: ' + err.message });
-    }
-  };
-
   // Save All Settings
   const handleSaveAll = async () => {
     setIsSaving(true);
@@ -187,6 +177,7 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
       navBgColor,
       navTextColor,
       primaryColor,
+      siteBgColor,
       customMenus,
     };
 
@@ -298,26 +289,6 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
           }}
         >
           🎨 Warna & Tema Situs
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('admin')}
-          style={{
-            padding: '12px 20px',
-            border: 'none',
-            borderBottom: activeTab === 'admin' ? '3px solid #8b0000' : '3px solid transparent',
-            backgroundColor: activeTab === 'admin' ? '#f8fafc' : 'transparent',
-            color: activeTab === 'admin' ? '#8b0000' : '#64748b',
-            fontWeight: '600',
-            cursor: 'pointer',
-            fontSize: '0.95rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          🔒 Hak Akses Super Admin
         </button>
       </div>
 
@@ -653,10 +624,60 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
       {/* TAB 3: SKEMA WARNA & TEMA */}
       {activeTab === 'theme' && (
         <div style={{ backgroundColor: '#f8fafc', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '30px' }}>
-          <h3 style={{ marginTop: 0, color: '#1e293b', fontSize: '1.25rem' }}>🎨 Skema Warna Utama & Aksen Situs</h3>
+          <h3 style={{ marginTop: 0, color: '#1e293b', fontSize: '1.25rem' }}>🎨 Skema Warna Utama & Background Situs</h3>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '20px' }}>
+            Atur warna latar belakang (background) seluruh website serta warna aksen utama untuk tombol dan elemen penting.
+          </p>
+
+          {/* Warna Background Situs */}
+          <div className="form-group" style={{ marginBottom: '30px', paddingBottom: '20px', borderBottom: '1px solid #cbd5e1' }}>
+            <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block', fontSize: '1rem', color: '#0f172a' }}>
+              🖼️ Warna Background Situs (Latar Belakang Website):
+            </label>
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '15px' }}>
+              <input
+                type="color"
+                value={siteBgColor}
+                onChange={(e) => setSiteBgColor(e.target.value)}
+                style={{ width: '50px', height: '42px', padding: 0, border: 'none', cursor: 'pointer', borderRadius: '6px' }}
+              />
+              <input
+                type="text"
+                value={siteBgColor}
+                onChange={(e) => setSiteBgColor(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '140px', fontFamily: 'monospace' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {COLOR_PRESETS_SITE_BG.map(preset => (
+                <button
+                  key={preset.hex}
+                  type="button"
+                  onClick={() => setSiteBgColor(preset.hex)}
+                  style={{
+                    backgroundColor: preset.hex,
+                    color: preset.hex === '#0f172a' ? '#ffffff' : '#0f172a',
+                    border: siteBgColor === preset.hex ? '3px solid #000' : '1px solid #cbd5e1',
+                    padding: '8px 14px',
+                    borderRadius: '20px',
+                    fontSize: '0.8rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  {preset.name}
+                </button>
+              ))}
+            </div>
+          </div>
           
-          <div className="form-group" style={{ marginBottom: '20px' }}>
-            <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>Pilih Warna Aksen Utama (Primary Accent Color):</label>
+          {/* Warna Aksen Utama */}
+          <div className="form-group" style={{ marginBottom: '10px' }}>
+            <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block', fontSize: '1rem', color: '#0f172a' }}>
+              ✨ Warna Aksen Utama (Primary Accent Color):
+            </label>
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '15px' }}>
               <input
                 type="color"
@@ -698,54 +719,8 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
         </div>
       )}
 
-      {/* TAB 4: HAK AKSES SUPER ADMIN */}
-      {activeTab === 'admin' && (
-        <div style={{ backgroundColor: '#f8fafc', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '30px' }}>
-          <h3 style={{ marginTop: 0, color: '#0f172a', fontSize: '1.2rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>
-            🔒 Hak Akses Tunggal Super Admin (admingpib)
-          </h3>
-          <p style={{ color: '#475569', lineHeight: '1.6', fontSize: '0.95rem' }}>
-            Hanya akun <strong>Super Admin (admingpib)</strong> yang memiliki hak akses eksklusif untuk mengedit dan mengelola seluruh konten serta kustomisasi website GPIB Banda Aceh.
-          </p>
-
-          <div style={{ marginTop: '20px', backgroundColor: '#ffffff', padding: '16px 20px', borderRadius: '8px', border: '1px solid #cbd5e1', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <tbody>
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 'bold', width: '220px', color: '#334155' }}>Username Super Admin:</td>
-                  <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '1.05rem', color: '#0f172a', fontWeight: '600' }}>admingpib / admingpib@gpib.org</td>
-                </tr>
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 'bold', color: '#334155' }}>Status Akses:</td>
-                  <td style={{ padding: '10px 12px', color: '#16a34a', fontWeight: '600' }}>
-                    ✅ Akses Penuh Kustomisasi Situs & A.Panel
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div style={{ marginTop: '20px', textAlign: 'right', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              onClick={handleCleanupAccounts}
-              style={{ padding: '10px 18px', fontSize: '0.85rem', fontWeight: '600', backgroundColor: '#fff', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '6px', cursor: 'pointer' }}
-            >
-              🧹 Bersihkan Akun Non-Super Admin
-            </button>
-            <button
-              type="button"
-              onClick={onLogout}
-              style={{ padding: '10px 20px', fontSize: '0.9rem', fontWeight: '600', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-            >
-              🚪 Logout Admin
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* LIVE PREVIEW BOX */}
-      <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px dashed #cbd5e1', marginBottom: '30px' }}>
+      <div style={{ backgroundColor: siteBgColor, padding: '20px', borderRadius: '12px', border: '2px dashed #cbd5e1', marginBottom: '30px', transition: 'background-color 0.3s ease' }}>
         <h4 style={{ marginTop: 0, color: '#475569', fontSize: '0.95rem' }}>👁️ Pratinjau Tampilan Langsung (Live Preview Header & Navbar):</h4>
         
         {/* Header Preview */}
