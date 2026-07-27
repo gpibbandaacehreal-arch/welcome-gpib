@@ -1255,6 +1255,7 @@ function App() {
     backgroundImage: headerBgImage ? `linear-gradient(${headerBgOverlay}, ${headerBgOverlay}), url(${toImageKitUrl(headerBgImage)})` : undefined,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
+    borderBottom: `4px solid ${siteContent.settings.primaryColor || '#8b0000'}`,
   };
 
   const headerTitleStyle: React.CSSProperties = {
