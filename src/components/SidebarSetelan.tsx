@@ -36,8 +36,10 @@ const SidebarSetelan: React.FC<SidebarSetelanProps> = ({
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('File terlalu besar! Maksimal ukuran logo adalah 2 MB.');
+      const isGif = file.type === 'image/gif';
+      const maxSize = isGif ? 5 * 1024 * 1024 : 2 * 1024 * 1024;
+      if (file.size > maxSize) {
+        alert(`File terlalu besar! Maksimal ukuran logo adalah ${isGif ? '5 MB (GIF)' : '2 MB'}.`);
         e.target.value = '';
         return;
       }
@@ -125,7 +127,7 @@ const SidebarSetelan: React.FC<SidebarSetelanProps> = ({
               />
             </div>
             <div className="sidebar-field" style={{marginTop: '10px'}}>
-              <label>Logo Situs (Maksimal 2 MB)</label>
+              <label>Logo Situs (Maksimal 2 MB, GIF hingga 5 MB)</label>
               {siteLogo && (
                 <div style={{marginBottom: '5px'}}>
                   <img src={toImageKitUrl(siteLogo, 400)} alt="Logo" style={{maxHeight: '40px', borderRadius: '4px'}} />

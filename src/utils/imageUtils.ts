@@ -15,6 +15,15 @@ export const compressImage = (base64Str: string, maxWidth = 800, quality = 0.7):
       return;
     }
 
+    // GIF dilewati (skip) dari kompresi canvas.
+    // Canvas hanya menangkap 1 frame, jadi GIF animasi akan jadi gambar diam
+    // kalau tetap diproses di sini. Upload apa adanya, biarkan ImageKit yang
+    // mengoptimalkan ukurannya tanpa merusak animasi.
+    if (base64Str.startsWith('data:image/gif')) {
+      resolve(base64Str);
+      return;
+    }
+
     const img = new Image();
     img.src = base64Str;
     img.onload = () => {
