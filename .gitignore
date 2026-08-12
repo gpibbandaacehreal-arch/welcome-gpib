@@ -25,3 +25,9 @@ dist-ssr
 
 .vercel
 website-gpib-banda-aceh-*.json
+
+# Environment variables
+.env
+
+# Tooling caches
+.aider.tags.cache.v4/
