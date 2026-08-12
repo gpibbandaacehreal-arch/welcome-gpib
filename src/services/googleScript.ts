@@ -8,12 +8,24 @@
 export const GOOGLE_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycby4IEYEAPeR8TqD54TjuZ4jIGxAEeJN3U-KJenLNkk7g_Wq1ui2nweS0MHM_x4kCU5D/exec';
 
-/** Batas waktu tunggu respons server (ms). Deployment yang bermasalah sering menggantung tanpa respons. */
-const REQUEST_TIMEOUT_MS = 10000;
+/**
+ * Batas waktu tunggu respons GET (ms). Apps Script sering lambat (~10-20 dtk
+ * cold start + baca spreadsheet), jadi 10 dtk terlalu ketat dan membuat
+ * banner peringatan muncul padahal sinkronisasi sebenarnya berjalan.
+ */
+const REQUEST_TIMEOUT_MS = 25000;
 
-async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+/**
+ * Batas waktu tunggu POST simpan (ms). SENG AJA lebih besar dari GET:
+ * Apps Script sering butuh ~10 dtk (cold start + tulis spreadsheet),
+ * timeout 10 dtk sebelumnya membuat simpan yang sebenarnya sukses
+ * tetap melaporkan kegagalan.
+ */
+const SAVE_TIMEOUT_MS = 30000;
+
+async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs: number = REQUEST_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } finally {
@@ -37,10 +49,14 @@ export async function fetchFromGoogleScript(): Promise<Record<string, unknown>> 
  * Timeout mencegah tombol/UI menggantung jika server tidak merespons.
  */
 export async function postToGoogleScript(payload: Record<string, unknown>): Promise<void> {
-  await fetchWithTimeout(GOOGLE_SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload),
-  });
+  await fetchWithTimeout(
+    GOOGLE_SCRIPT_URL,
+    {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload),
+    },
+    SAVE_TIMEOUT_MS
+  );
 }

@@ -266,11 +266,23 @@ function App() {
     }
   }, [])
 
-  // Polling adaptif: saat sinkron bermasalah (syncError), jeda diperpanjang ke 60 detik
-  // agar tidak terus menghantam endpoint yang rusak; kembali ke 15 detik saat pulih.
+  // Polling adaptif non-tumpang-tindih: poll berikutnya baru dijadwalkan SETELAH
+  // poll sebelumnya selesai (Apps Script bisa lambat, ~10-25 dtk). Saat sinkron
+  // bermasalah (syncError), jeda diperpanjang ke 60 detik; kembali ke 15 detik saat pulih.
   useEffect(() => {
-    const interval = setInterval(() => { void fetchData(true) }, syncError ? 60000 : 15000)
-    return () => clearInterval(interval)
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout>
+    const poll = async () => {
+      await fetchData(true)
+      if (!cancelled) {
+        timer = setTimeout(poll, syncError ? 60000 : 15000)
+      }
+    }
+    timer = setTimeout(poll, syncError ? 60000 : 15000)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [syncError])
 
   const fetchSupabaseProposals = async () => {
