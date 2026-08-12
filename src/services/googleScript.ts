@@ -6,7 +6,7 @@
  * di aplikasi otomatis memakai URL terbaru.
  */
 export const GOOGLE_SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbycROw7gCO_xEwHmberQzMDfUf_nJIRVUuN-90o7DpSrhV1p8yZhQEqCUL9LEB_I-WF0g/exec';
+  'https://script.google.com/macros/s/AKfycby4IEYEAPeR8TqD54TjuZ4jIGxAEeJN3U-KJenLNkk7g_Wq1ui2nweS0MHM_x4kCU5D/exec';
 
 /** Batas waktu tunggu respons server (ms). Deployment yang bermasalah sering menggantung tanpa respons. */
 const REQUEST_TIMEOUT_MS = 10000;
