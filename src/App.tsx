@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import './App.css'
 import LoginForm from './components/LoginForm'
-import AdminDashboard from './components/AdminDashboard'
-import APanel from './components/APanel'
+import ErrorBoundary from './components/ErrorBoundary'
+
+// Lazy load komponen berat: AdminDashboard berisi editor Quill, APanel hanya untuk admin.
+// Keduanya dipecah ke chunk terpisah agar bundle awal tetap ringan.
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'))
+const APanel = lazy(() => import('./components/APanel'))
 import { compressImage, toImageKitUrl, filterHtmlImages, uploadImageToCloud } from './utils/imageUtils'
 import DownloadProposal from './components/DownloadProposal'
 import { supabase, type SupabaseProposal } from './services/supabase'
@@ -1412,7 +1416,15 @@ function App() {
       </nav>
 
       <main className="main-content">
-        {renderPage()}
+        <ErrorBoundary>
+          <Suspense fallback={
+            <div className="page-card" style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              <p>⏳ Memuat halaman...</p>
+            </div>
+          }>
+            {renderPage()}
+          </Suspense>
+        </ErrorBoundary>
       </main>
 
       <footer className="footer">

@@ -1,5 +1,3 @@
-import { PDFDocument } from 'pdf-lib';
-
 export interface ProposalData {
   nomorSurat: string;
   tujuanSurat: string;
@@ -7,6 +5,8 @@ export interface ProposalData {
 }
 
 export const generateProposalPDF = async (data: ProposalData): Promise<Uint8Array> => {
+  // Dynamic import: pdf-lib (~300 KB) hanya dimuat saat proposal benar-benar diunduh
+  const { PDFDocument } = await import('pdf-lib');
   console.log('Memulai generateProposalPDF dengan data:', data);
   try {
     // 1. Load cover.pdf and isi.pdf from public folder
