@@ -205,10 +205,17 @@ function App() {
       setSyncError(false)
       if (!isSilent) console.log("Data berhasil diambil dari Drive:", data);
       
-      if (data && (data.settings || data.pages)) {
-        const migratedPages = { ...data.pages };
-        Object.keys(migratedPages).forEach(key => {
-          const page = migratedPages[key];
+      // SAFETY: hanya aplikasikan data dari Google jika BENAR-BENAR berisi record.
+      // Objek kosong ({} dari spreadsheet kosong / backend rusak / anti-abuse)
+      // TIDAK BOLEH menimpa konten lokal yang baru dipublikasikan pengguna.
+      const hasPages = !!data.pages && Object.keys(data.pages).length > 0;
+      const hasSettings = !!data.settings && Object.keys(data.settings).length > 0;
+      const hasUmat = Array.isArray(data.umat) && data.umat.length > 0;
+
+      if (hasPages || hasSettings || hasUmat) {
+        const remotePages: Record<string, PageContent> = hasPages ? { ...data.pages } : {};
+        Object.keys(remotePages).forEach(key => {
+          const page = remotePages[key];
           if (page && !page.content && page.blocks) {
             page.content = page.blocks.map((b: ContentBlock) => {
               if (b.type === 'text') return `<p>${b.value.replace(/\n/g, '<br>')}</p>`;
@@ -218,20 +225,16 @@ function App() {
           }
         });
 
-        // SAFETY: Only update if the incoming data actually contains records
-        // This prevents overwriting with empty arrays if the script fails to fetch records
         setSiteContent(prev => {
-          const mergedSettings = {
-            ...DEFAULT_CONTENT.settings,
-            ...prev.settings,
-            ...(data.settings || {})
-          };
+          const mergedSettings = hasSettings
+            ? { ...DEFAULT_CONTENT.settings, ...prev.settings, ...data.settings }
+            : { ...DEFAULT_CONTENT.settings, ...prev.settings };
 
           const mergedContent = {
             ...prev,
             settings: mergedSettings,
-            pages: data.pages ? { ...DEFAULT_CONTENT.pages, ...migratedPages } : prev.pages,
-            umat: (data.umat && data.umat.length > 0) ? data.umat : prev.umat
+            pages: hasPages ? { ...DEFAULT_CONTENT.pages, ...remotePages } : prev.pages,
+            umat: hasUmat ? (data.umat as UmatRecord[]) : prev.umat
           };
 
           const isSameUmat = JSON.stringify(prev.umat) === JSON.stringify(mergedContent.umat);

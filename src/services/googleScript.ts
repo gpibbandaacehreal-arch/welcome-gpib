@@ -44,19 +44,34 @@ export async function fetchFromGoogleScript(): Promise<Record<string, unknown>> 
 
 /**
  * Kirim aksi tulis (updateContent / updateUmat) ke Google Apps Script.
- * Memakai mode 'no-cors' (sama seperti sebelumnya): permintaan tetap terkirim,
- * tapi respons tidak dapat dibaca — jadi kegagalan server tidak terdeteksi di sini.
- * Timeout mencegah tombol/UI menggantung jika server tidak merespons.
+ * Mode 'cors' dipakai agar respons benar-benar terbaca: jika backend rusak /
+ * mengembalikan 404 (mis. deployment dihapus atau diblokir Google), fungsi ini
+ * melempar error sehingga aplikasi memberi tahu pengguna secara jujur — bukan
+ * mengklaim "tersimpan" padahal gagal. Timeout mencegah UI menggantung.
  */
 export async function postToGoogleScript(payload: Record<string, unknown>): Promise<void> {
-  await fetchWithTimeout(
+  const response = await fetchWithTimeout(
     GOOGLE_SCRIPT_URL,
     {
       method: 'POST',
-      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload),
     },
     SAVE_TIMEOUT_MS
   );
+  if (!response.ok) {
+    throw new Error(`Gagal menyimpan ke server (HTTP ${response.status})`);
+  }
+  try {
+    const result = (await response.json()) as { status?: string; message?: string } | null;
+    if (result && result.status === 'error') {
+      throw new Error(result.message || 'Server menolak penyimpanan');
+    }
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      // Respons bukan JSON (mis. halaman anti-abuse Google) — permintaan tetap terkirim.
+      return;
+    }
+    throw err;
+  }
 }
