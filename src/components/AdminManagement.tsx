@@ -22,13 +22,17 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({ onLogout }) =>
           text: 'Semua data username & password Pelkat dan Komisi telah dibersihkan dari Supabase. Hanya Super Admin (admingpib) yang aktif.'
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error cleaning up pelkat/komisi accounts:', err);
     }
   };
 
   useEffect(() => {
-    cleanupPelkatKomisiAccounts();
+    // Jalankan sekali setelah mount tanpa setState sinkron di body effect
+    const timer = setTimeout(() => {
+      void cleanupPelkatKomisiAccounts();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   return (

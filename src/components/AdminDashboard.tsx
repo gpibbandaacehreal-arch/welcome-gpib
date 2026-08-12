@@ -1,7 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import HeaderAksi from './HeaderAksi';
 import EditorUtama from './EditorUtama';
 import SidebarSetelan from './SidebarSetelan';
+
+/**
+ * Data editor yang dikirim dari AdminDashboard ke App (onSave / onPublish).
+ */
+export interface EditorSaveData {
+  title: string;
+  content: string;
+  label: string;
+  jadwal: string;
+  tautan: string;
+  komentar: boolean;
+  siteTitle: string;
+  siteLogo: string;
+  berandaPdf: string;
+}
 
 interface AdminDashboardProps {
   initialTitle: string;
@@ -9,8 +24,8 @@ interface AdminDashboardProps {
   initialSiteTitle: string;
   initialSiteLogo: string;
   initialBerandaPdf: string;
-  onSave: (data: any) => void;
-  onPublish: (data: any) => void;
+  onSave: (data: EditorSaveData) => void;
+  onPublish: (data: EditorSaveData) => void;
   isSaving: boolean;
 }
 
@@ -32,14 +47,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [tautan, setTautan] = useState('');
   const [komentar, setKomentar] = useState(true);
 
-  // Sync with initial props when tab changes
-  useEffect(() => {
+  // Sinkronkan state editor ketika props awal berubah (ganti tab) —
+  // pakai pola "adjust state during render" agar tidak memicu cascading render.
+  const [lastInitialKey, setLastInitialKey] = useState('');
+  const initialKey = [initialTitle, initialContent, initialSiteTitle, initialSiteLogo, initialBerandaPdf].join('|');
+  if (initialKey !== lastInitialKey) {
+    setLastInitialKey(initialKey);
     setTitle(initialTitle);
     setContent(initialContent);
     setSiteTitle(initialSiteTitle);
     setSiteLogo(initialSiteLogo);
     setBerandaPdf(initialBerandaPdf);
-  }, [initialTitle, initialContent, initialSiteTitle, initialSiteLogo, initialBerandaPdf]);
+  }
 
   const handlePublish = () => {
     onPublish({ title, content, label, jadwal, tautan, komentar, siteTitle, siteLogo, berandaPdf });

@@ -1,8 +1,10 @@
 import React, { useRef, useMemo } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
-import EditorToolbar, { modules, formats } from './EditorToolbar';
+import EditorToolbar from './EditorToolbar';
+import { modules, formats } from './editorConfig';
 import { compressImage, uploadImageToCloud } from '../utils/imageUtils';
+import { getErrorMessage } from '../utils/errorUtils';
 
 interface EditorUtamaProps {
   title: string;
@@ -41,9 +43,9 @@ const EditorUtama: React.FC<EditorUtamaProps> = ({ title, setTitle, content, set
                 quill.insertEmbed(range.index, 'image', publicUrl);
               }
             }
-          } catch (uploadError: any) {
+          } catch (uploadError) {
             console.error('Error uploading image to cloud:', uploadError);
-            alert('Gagal mengunggah gambar ke cloud: ' + uploadError.message);
+            alert('Gagal mengunggah gambar ke cloud: ' + getErrorMessage(uploadError));
           }
         };
         reader.readAsDataURL(file);

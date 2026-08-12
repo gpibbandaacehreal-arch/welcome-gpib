@@ -1,11 +1,13 @@
 import { supabase } from './supabase';
+import { getErrorMessage } from '../utils/errorUtils';
+import type { User } from '@supabase/supabase-js';
 
 export interface SubMenu {
   id: string | number;
   name?: string;
   slug?: string;
   title?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AdminProfile {
@@ -19,7 +21,7 @@ export interface AuthResponse {
   success: boolean;
   message?: string;
   token?: string;
-  user?: any;
+  user?: User | { id: string; email: string } | null;
   profile?: AdminProfile | null;
 }
 
@@ -101,11 +103,11 @@ export const authService = {
         success: false,
         message: 'Username atau password yang Anda masukkan salah. Hanya Super Admin (admingpib) yang memiliki hak akses.',
       };
-    } catch (err: any) {
+    } catch (err) {
       console.error('Login error:', err);
       return {
         success: false,
-        message: err?.message || 'Gagal menghubungkan ke server. Periksa koneksi internet Anda.',
+        message: getErrorMessage(err, 'Gagal menghubungkan ke server. Periksa koneksi internet Anda.'),
       };
     }
   },

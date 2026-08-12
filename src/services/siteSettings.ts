@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { toImageKitUrl } from '../utils/imageUtils';
+import { getErrorMessage } from '../utils/errorUtils';
 
 export interface CustomMenuItem {
   id: string;
@@ -63,7 +64,7 @@ export const siteSettingsService = {
     if (saved) {
       try {
         cachedSettings = JSON.parse(saved);
-      } catch (e) {}
+      } catch { /* abaikan error parsing cache lokal */ }
     }
 
     try {
@@ -147,8 +148,8 @@ export const siteSettingsService = {
       if (error) {
         console.warn('Supabase site_settings upsert note:', error.message);
       }
-    } catch (err: any) {
-      console.warn('Saving to Supabase stored locally.', err?.message || err);
+    } catch (err) {
+      console.warn('Saving to Supabase stored locally.', getErrorMessage(err));
     }
   }
 };

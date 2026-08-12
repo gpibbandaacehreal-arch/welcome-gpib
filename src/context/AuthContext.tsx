@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase';
 import { authService, fetchAdminProfile, type AdminProfile, type AuthResponse } from '../services/auth';
@@ -26,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const checkLocalAuth = () => {
+  const checkLocalAuth = useCallback(() => {
     if (authService.isAuthenticated()) {
       const storedProfile = authService.getProfile();
       setUser({ id: storedProfile?.id || 'super_admin_1', email: 'admingpib@gpib.org' });
@@ -34,9 +34,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return true;
     }
     return false;
-  };
+  }, []);
 
-  const loadUserProfile = async (currentUser: User | null) => {
+  const loadUserProfile = useCallback(async (currentUser: User | null) => {
     if (!currentUser) {
       if (!checkLocalAuth()) {
         setProfile(null);
@@ -53,24 +53,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(null);
       }
     }
-  };
+  }, [checkLocalAuth]);
 
   useEffect(() => {
-    // Check initial local authentication state
-    const hasLocal = checkLocalAuth();
+    // Baca state autentikasi lokal TANPA setState sinkron di body effect;
+    // state hanya di-set di dalam callback async di bawah ini.
+    const storedProfile = authService.isAuthenticated() ? (authService.getProfile() || null) : null;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const applyInitialAuth = (session: Session | null) => {
       setSession(session);
       const currentUser = session?.user ?? null;
       if (currentUser) {
         setUser(currentUser);
-        loadUserProfile(currentUser).finally(() => setIsLoading(false));
+        void loadUserProfile(currentUser).finally(() => setIsLoading(false));
       } else {
-        if (!hasLocal) {
+        if (storedProfile) {
+          setUser({ id: storedProfile.id || 'super_admin_1', email: 'admingpib@gpib.org' });
+          setProfile(storedProfile);
+        } else {
           setUser(null);
         }
         setIsLoading(false);
       }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      applyInitialAuth(session);
+    }).catch((err) => {
+      // Jika getSession gagal (mis. jaringan), tetap terapkan auth lokal agar app tidak stuck
+      console.error('Gagal mengambil session awal:', err);
+      applyInitialAuth(null);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -91,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [checkLocalAuth, loadUserProfile]);
 
   const login = async (usernameOrEmail: string, password: string): Promise<AuthResponse> => {
     setIsLoading(true);
@@ -142,6 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook untuk mengonsumsi context, bukan komponen UI
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {

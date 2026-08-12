@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { uploadImageToCloud, toImageKitUrl } from '../utils/imageUtils';
+import { getErrorMessage } from '../utils/errorUtils';
 import type { SiteSettings, CustomMenuItem } from '../services/siteSettings';
 
 interface APanelProps {
@@ -100,9 +101,9 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
       finalUrl = toImageKitUrl(finalUrl);
       setLogoUrl(finalUrl);
       setMessage({ type: 'success', text: 'Gambar logo berhasil diunggah via ImageKit Proxy!' });
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setMessage({ type: 'error', text: 'Gagal mengunggah logo: ' + (err?.message || 'Error') });
+      setMessage({ type: 'error', text: 'Gagal mengunggah logo: ' + getErrorMessage(err) });
     } finally {
       setIsUploadingLogo(false);
     }
@@ -119,9 +120,9 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
       finalUrl = toImageKitUrl(finalUrl);
       setHeaderBgImage(finalUrl);
       setMessage({ type: 'success', text: 'Gambar/GIF Header berhasil diunggah via ImageKit Proxy!' });
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setMessage({ type: 'error', text: 'Gagal mengunggah gambar header: ' + (err?.message || 'Error') });
+      setMessage({ type: 'error', text: 'Gagal mengunggah gambar header: ' + getErrorMessage(err) });
     } finally {
       setIsUploadingHeaderBg(false);
     }
@@ -184,8 +185,8 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
     try {
       await onSaveSettings(updatedSettings);
       setMessage({ type: 'success', text: '✨ Semua kustomisasi A.Panel berhasil disimpan dan disinkronkan ke Supabase & ImageKit!' });
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err?.message || 'Gagal menyimpan setelan A.Panel.' });
+    } catch (err) {
+      setMessage({ type: 'error', text: getErrorMessage(err, 'Gagal menyimpan setelan A.Panel.') });
     } finally {
       setIsSaving(false);
     }

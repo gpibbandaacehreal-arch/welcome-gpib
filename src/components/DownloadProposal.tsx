@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { generateProposalPDF } from '../utils/pdfUtils';
+import { getErrorMessage } from '../utils/errorUtils';
 import { type SupabaseProposal } from '../services/supabase';
 
 interface DownloadProposalProps {
   isLoggedIn: boolean;
   proposals: SupabaseProposal[];
-  onAddProposal: (pemohon: string, tujuanSurat: string, noUrut: number, nomorSurat: string) => Promise<any>;
+  onAddProposal: (pemohon: string, tujuanSurat: string, noUrut: number, nomorSurat: string) => Promise<SupabaseProposal[] | null>;
   onEditProposal: (id: number, updates: Partial<SupabaseProposal>) => Promise<void>;
   onDeleteProposal: (id: number) => Promise<void>;
 }
@@ -77,9 +78,9 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
       if (insertedRows && insertedRows.length > 0) {
         handleDownload(insertedRows[0]);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('ERROR SUPABASE:', err);
-      alert(err?.message || JSON.stringify(err));
+      alert(getErrorMessage(err, 'Gagal memproses proposal.'));
     } finally {
       setIsProcessing(false);
     }
@@ -104,8 +105,8 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
         pemohon: editPemohon 
       });
       setEditingId(null);
-    } catch (err: any) {
-      alert(err.message || 'Gagal mengupdate proposal di Supabase.');
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal mengupdate proposal di Supabase.'));
     } finally {
       setIsProcessing(false);
     }
@@ -118,8 +119,8 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
     setIsProcessing(true);
     try {
       await onDeleteProposal(id);
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus proposal di Supabase.');
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal menghapus proposal di Supabase.'));
     } finally {
       setIsProcessing(false);
     }
@@ -142,8 +143,8 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
       link.click();
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(url), 100);
-    } catch (err: any) {
-      alert(`Gagal mendownload PDF: ${err.message || 'Error tidak diketahui'}`);
+    } catch (err) {
+      alert(`Gagal mendownload PDF: ${getErrorMessage(err, 'Error tidak diketahui')}`);
     }
   };
 

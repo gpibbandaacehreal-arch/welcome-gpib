@@ -11,6 +11,8 @@ import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import { normalizeSubMenuKey } from './utils/menuUtils'
 import { siteSettingsService, type SiteSettings } from './services/siteSettings'
+import { getErrorMessage } from './utils/errorUtils'
+import type { EditorSaveData } from './components/AdminDashboard'
 
 
 // Types
@@ -46,7 +48,7 @@ interface FullContent {
   settings: SiteSettings;
   pages: Record<string, PageContent>;
   umat: UmatRecord[];
-  proposals: any[]; // New field for shared proposal history
+  proposals: SupabaseProposal[]; // New field for shared proposal history
 }
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbycROw7gCO_xEwHmberQzMDfUf_nJIRVUuN-90o7DpSrhV1p8yZhQEqCUL9LEB_I-WF0g/exec';
@@ -129,7 +131,7 @@ function App() {
           pages: { ...DEFAULT_CONTENT.pages, ...parsed.pages },
           proposals: parsed.proposals || []
         }
-      } catch (e) {
+      } catch {
         return DEFAULT_CONTENT
       }
     }
@@ -169,11 +171,13 @@ function App() {
   const [userSubmitMessage, setUserSubmitMessage] = useState<string | null>(null)
   const [isSubmittingUserForm, setIsSubmittingUserForm] = useState(false)
 
-  // Tutup menu otomatis setiap kali tab berubah
-  useEffect(() => {
+  // Tutup menu otomatis setiap kali tab berubah — pola "adjust state during render"
+  const [lastActiveTab, setLastActiveTab] = useState<Tab>('Beranda')
+  if (activeTab !== lastActiveTab) {
+    setLastActiveTab(activeTab)
     setIsMobileMenuOpen(false)
     setIsDropdownOpen(false)
-  }, [activeTab])
+  }
 
   // Reset logo lama jika masih pakai LOGO_GPIB.jpg
   useEffect(() => {
@@ -185,7 +189,7 @@ function App() {
         parsed.settings.logo = '/LOGO_GPIB_BANDA_ACEH.png';
         localStorage.setItem('gpibSiteContent', JSON.stringify(parsed));
       }
-    } catch (e) {}
+    } catch { /* abaikan error parsing */ }
   }
 }, []);
 
@@ -204,7 +208,7 @@ function App() {
         Object.keys(migratedPages).forEach(key => {
           const page = migratedPages[key];
           if (page && !page.content && page.blocks) {
-            page.content = page.blocks.map((b: any) => {
+            page.content = page.blocks.map((b: ContentBlock) => {
               if (b.type === 'text') return `<p>${b.value.replace(/\n/g, '<br>')}</p>`;
               if (b.type === 'image') return `<div class="content-image-wrapper"><img src="${toImageKitUrl(b.value, 800)}" class="content-image" /></div>`;
               return '';
@@ -249,9 +253,13 @@ function App() {
 
   // Fetch data on mount and setup polling
   useEffect(() => {
-    fetchData()
-    const interval = setInterval(() => fetchData(true), 15000) // Increased interval slightly
-    return () => clearInterval(interval)
+    // Panggil async lewat timer agar tidak ada setState sinkron di body effect
+    const initialTimer = setTimeout(() => { void fetchData() }, 0)
+    const interval = setInterval(() => { void fetchData(true) }, 15000) // Increased interval slightly
+    return () => {
+      clearTimeout(initialTimer)
+      clearInterval(interval)
+    }
   }, [])
 
   const fetchSupabaseProposals = async () => {
@@ -279,13 +287,13 @@ function App() {
 
   useEffect(() => {
     console.log('Setting up Supabase real-time channel...');
-    fetchSupabaseProposals();
+    const initialTimer = setTimeout(() => { void fetchSupabaseProposals(); }, 0);
 
     const channel = supabase
       .channel('public:riwayat_download')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'riwayat_download' }, (payload) => {
         console.log('Real-time change detected!', payload);
-        fetchSupabaseProposals();
+        void fetchSupabaseProposals();
       })
       .subscribe((status) => {
         console.log('Supabase subscription status:', status);
@@ -293,33 +301,36 @@ function App() {
 
     return () => {
       console.log('Cleaning up Supabase channel');
-      supabase.removeChannel(channel);
+      clearTimeout(initialTimer);
+      void supabase.removeChannel(channel);
     };
   }, []);
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      setEditSiteTitle(siteContent.settings?.title || '')
-      setEditLogo(siteContent.settings?.logo || '')
-      setEditBerandaPdf(siteContent.settings?.berandaPdf || '')
-      
-      const pageKey = normalizeSubMenuKey(activeTab) || activeTab;
-      const pageData = siteContent.pages?.[pageKey] || siteContent.pages?.[activeTab] || {
-        title: pageKey === 'PA' ? 'Pelayanan Anak (PA)' :
-               pageKey === 'PT' ? 'Pelayanan Taruna (PT)' :
-               pageKey === 'GP' ? 'Gerakan Pemuda (GP)' :
-               pageKey === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
-               pageKey === 'PKP' ? 'Persekutuan Kaum Perempuan (PKP)' :
-               pageKey === 'GermasaLH' ? 'GermasaLH' :
-               pageKey === 'PG' ? 'Komisi Pembangunan Gereja (PG)' :
-               pageKey === 'Inforkom-Litbang' ? 'Inforkom-Litbang' : activeTab,
-        content: `<p>Informasi & Kegiatan ${activeTab} GPIB Banda Aceh.</p>`
-      };
+  // Sinkronkan field editor saat tab berubah (hanya saat login) — pola "adjust state during render"
+  const [lastEditorSyncKey, setLastEditorSyncKey] = useState('')
+  const editorPageKey = normalizeSubMenuKey(activeTab) || activeTab
+  const editorSyncKey = isLoggedIn ? `${activeTab}|${editorPageKey}` : ''
+  if (isLoggedIn && editorSyncKey !== lastEditorSyncKey) {
+    setLastEditorSyncKey(editorSyncKey)
+    setEditSiteTitle(siteContent.settings?.title || '')
+    setEditLogo(siteContent.settings?.logo || '')
+    setEditBerandaPdf(siteContent.settings?.berandaPdf || '')
 
-      setEditTitle(pageData.title || '')
-      setEditContent(pageData.content || '')
-    }
-  }, [isLoggedIn, activeTab])
+    const pageData = siteContent.pages?.[editorPageKey] || siteContent.pages?.[activeTab] || {
+      title: editorPageKey === 'PA' ? 'Pelayanan Anak (PA)' :
+             editorPageKey === 'PT' ? 'Pelayanan Taruna (PT)' :
+             editorPageKey === 'GP' ? 'Gerakan Pemuda (GP)' :
+             editorPageKey === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
+             editorPageKey === 'PKP' ? 'Persekutuan Kaum Perempuan (PKP)' :
+             editorPageKey === 'GermasaLH' ? 'GermasaLH' :
+             editorPageKey === 'PG' ? 'Komisi Pembangunan Gereja (PG)' :
+             editorPageKey === 'Inforkom-Litbang' ? 'Inforkom-Litbang' : activeTab,
+      content: `<p>Informasi & Kegiatan ${activeTab} GPIB Banda Aceh.</p>`
+    };
+
+    setEditTitle(pageData.title || '')
+    setEditContent(pageData.content || '')
+  }
 
   useEffect(() => {
     const fetchSiteSettings = async () => {
@@ -355,7 +366,7 @@ function App() {
     try {
       localStorage.setItem('gpibSiteContent', JSON.stringify(updatedContent));
       localStorage.setItem('gpib_site_settings', JSON.stringify(newSettings));
-    } catch (e) {}
+    } catch { /* abaikan error localStorage */ }
 
     await siteSettingsService.saveSettings(newSettings);
 
@@ -372,21 +383,28 @@ function App() {
     }
   };
 
-  useEffect(() => {
+  // Sinkronkan activeTab dari URL (pola "adjust state during render")
+  const [lastSyncPath, setLastSyncPath] = useState('')
+  if (location.pathname !== lastSyncPath) {
+    setLastSyncPath(location.pathname);
     if (location.pathname === '/admin/apanel' || location.pathname === '/admin/manage') {
       setActiveTab('APanel');
     } else if (location.pathname.startsWith('/admin/submenu/')) {
       const rawSubId = location.pathname.replace('/admin/submenu/', '');
       const subId = normalizeSubMenuKey(rawSubId);
       if (subId) setActiveTab(subId);
-    } else if (isLoggedIn && (profile?.sub_menu || profile?.sub_menu_id) && (location.pathname === '/admin' || location.pathname === '/login')) {
+    }
+  }
+
+  // Redirect pengguna sub-menu dari /admin atau /login (hanya efek samping navigasi)
+  useEffect(() => {
+    if (isLoggedIn && (profile?.sub_menu || profile?.sub_menu_id) && (location.pathname === '/admin' || location.pathname === '/login')) {
       const userSubKey = normalizeSubMenuKey(profile?.sub_menu || profile?.sub_menu_id);
       if (userSubKey) {
-        setActiveTab(userSubKey);
         navigate(`/admin/submenu/${userSubKey}`);
       }
     }
-  }, [location.pathname, isLoggedIn, profile])
+  }, [location.pathname, isLoggedIn, profile, navigate])
 
   const handleLogout = async () => {
     await authLogout();
@@ -394,7 +412,7 @@ function App() {
     navigate('/login');
   };
 
-  const saveChanges = async (updatedData?: any) => {
+  const saveChanges = async (updatedData?: EditorSaveData) => {
     setIsSaving(true)
     
     const pageKey = normalizeSubMenuKey(activeTab) || activeTab;
@@ -495,12 +513,12 @@ function App() {
     }
   }
 
-  const handleApproveUmat = async (umat: UmatRecord) => {
+  const handleApproveUmat = async (umat: UmatRecord, newId: string) => {
     // 1. Remove any existing entries (both pending and official) with same name
     const cleanList = siteContent.umat.filter(u => u.nama.toLowerCase() !== umat.nama.toLowerCase());
     
-    // 2. Add as official (isPending: false)
-    const officialUmat = { ...umat, isPending: false, id: Date.now().toString() };
+    // 2. Add as official (isPending: false) dengan id baru yang fresh
+    const officialUmat = { ...umat, isPending: false, id: newId };
     const newUmatList = [...cleanList, officialUmat];
 
     const newContent = { ...siteContent, umat: newUmatList };
@@ -590,9 +608,9 @@ function App() {
           const compressed = await compressImage(base64, 800, 0.6)
           const publicUrl = await uploadImageToCloud(compressed)
           setUmatForm(prev => ({ ...prev, [field]: publicUrl }))
-        } catch (error: any) {
+        } catch (error) {
           console.error(`Gagal mengunggah ${field}:`, error)
-          alert(`Gagal mengunggah ${field}: ` + error.message)
+          alert(`Gagal mengunggah ${field}: ` + getErrorMessage(error))
           e.target.value = ''
         } finally {
           if (field === 'photo') setIsUploadingPhoto(false)
@@ -802,7 +820,7 @@ function App() {
                             <button 
                               className="btn-save" 
                               style={{ padding: '6px 15px', fontSize: '0.8rem' }}
-                              onClick={() => handleApproveUmat(u)}
+                              onClick={() => handleApproveUmat(u, `approved_${Date.now()}`)}
                             >
                               Simpan
                             </button>
@@ -952,9 +970,9 @@ function App() {
                             const compressed = await compressImage(base64, 800, 0.6);
                             const publicUrl = await uploadImageToCloud(compressed);
                             setUserUmatForm(prev => ({ ...prev, photo: publicUrl }));
-                          } catch (error: any) {
+                          } catch (error) {
                             console.error('Gagal mengunggah foto:', error);
-                            alert('Gagal mengunggah foto ke cloud storage: ' + error.message);
+                            alert('Gagal mengunggah foto ke cloud storage: ' + getErrorMessage(error));
                             e.target.value = '';
                           } finally {
                             setIsUserUploadingPhoto(false);
@@ -983,9 +1001,9 @@ function App() {
                             const compressed = await compressImage(base64, 800, 0.6);
                             const publicUrl = await uploadImageToCloud(compressed);
                             setUserUmatForm(prev => ({ ...prev, kk: publicUrl }));
-                          } catch (error: any) {
+                          } catch (error) {
                             console.error('Gagal mengunggah KK:', error);
-                            alert('Gagal mengunggah KK ke cloud storage: ' + error.message);
+                            alert('Gagal mengunggah KK ke cloud storage: ' + getErrorMessage(error));
                             e.target.value = '';
                           } finally {
                             setIsUserUploadingKk(false);
@@ -1176,14 +1194,14 @@ function App() {
               initialSiteTitle={editSiteTitle || ''}
               initialSiteLogo={editLogo || ''}
               initialBerandaPdf={editBerandaPdf || ''}
-              onSave={(data: any) => {
+              onSave={(data: EditorSaveData) => {
                 setEditTitle(data.title || '');
                 setEditContent(data.content || '');
                 setEditSiteTitle(data.siteTitle || '');
                 setEditLogo(data.siteLogo || '');
                 setEditBerandaPdf(data.berandaPdf || '');
               }}
-              onPublish={(data: any) => saveChanges(data)}
+              onPublish={(data: EditorSaveData) => saveChanges(data)}
               isSaving={isSaving}
             />
           )}
@@ -1208,14 +1226,14 @@ function App() {
             initialSiteTitle={editSiteTitle || ''}
             initialSiteLogo={editLogo || ''}
             initialBerandaPdf={editBerandaPdf || ''}
-            onSave={(data: any) => {
+            onSave={(data: EditorSaveData) => {
               setEditTitle(data.title || '');
               setEditContent(data.content || '');
               setEditSiteTitle(data.siteTitle || '');
               setEditLogo(data.siteLogo || '');
               setEditBerandaPdf(data.berandaPdf || '');
             }}
-            onPublish={(data: any) => saveChanges(data)}
+            onPublish={(data: EditorSaveData) => saveChanges(data)}
             isSaving={isSaving}
           />
         )}
@@ -1265,21 +1283,22 @@ function App() {
     textShadow: headerBgImage ? '0 2px 8px rgba(0,0,0,0.7)' : undefined,
   };
 
-  const navInlineStyle: React.CSSProperties = {
+  // Custom CSS properties (--var) tidak termasuk tipe CSSProperties, jadi objek di-cast
+  const navInlineStyle = {
     backgroundColor: siteContent.settings.navBgColor || undefined,
     fontFamily: siteContent.settings.navFontFamily || undefined,
     fontSize: siteContent.settings.navFontSize || undefined,
     fontWeight: siteContent.settings.navFontWeight || undefined,
     color: siteContent.settings.navTextColor || undefined,
-    ['--nav-bg' as any]: siteContent.settings.navBgColor || '#1b3a2a',
-  };
+    '--nav-bg': siteContent.settings.navBgColor || '#1b3a2a',
+  } as React.CSSProperties;
 
-  const appContainerStyle: React.CSSProperties = {
-    ['--primary-color' as any]: siteContent.settings.primaryColor || '#8b0000',
-    ['--nav-bg' as any]: siteContent.settings.navBgColor || '#1b3a2a',
-    ['--bg-color' as any]: siteContent.settings.siteBgColor || '#ffffff',
+  const appContainerStyle = {
+    '--primary-color': siteContent.settings.primaryColor || '#8b0000',
+    '--nav-bg': siteContent.settings.navBgColor || '#1b3a2a',
+    '--bg-color': siteContent.settings.siteBgColor || '#ffffff',
     backgroundColor: siteContent.settings.siteBgColor || '#ffffff',
-  };
+  } as React.CSSProperties;
 
   const renderMainLayout = () => (
     <div className="app-container" style={appContainerStyle}>

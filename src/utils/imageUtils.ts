@@ -119,9 +119,7 @@ export const toImageKitUrl = (url: string, width?: number): string => {
       const parsed = new URL(url);
       const tr = width ? `?tr=w-${width},q-80` : `?tr=q-80`;
       return `${cleanEndpoint}${parsed.pathname}${tr}`;
-    } catch (e) {
-      // ignore
-    }
+    } catch { /* abaikan URL yang tidak valid */ }
   }
 
   // 5. Relative URL (misal: /LOGO_GPIB_BANDA_ACEH.png atau LOGO_GPIB.jpg)
@@ -147,9 +145,7 @@ export const toImageKitUrl = (url: string, width?: number): string => {
     // 7. Domain eksternal lainnya (proxy via ImageKit jika diatur)
     const tr = width ? `?tr=w-${width},q-80` : `?tr=q-80`;
     return `${cleanEndpoint}${parsed.pathname}${parsed.search}${tr}`;
-  } catch (e) {
-    // ignore
-  }
+  } catch { /* abaikan URL yang tidak valid */ }
 
   return url;
 };

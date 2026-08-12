@@ -29,15 +29,3 @@ const EditorToolbar: React.FC = () => (
 );
 
 export default EditorToolbar;
-export const modules = {
-  toolbar: {
-    container: "#toolbar",
-  },
-};
-
-export const formats = [
-  "header",
-  "bold", "italic", "underline", "strike",
-  "list",
-  "link", "image",
-];

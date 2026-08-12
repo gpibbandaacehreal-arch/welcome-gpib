@@ -2,10 +2,27 @@
  * Helper utilities for mapping sub-menu keys, slugs, and display names consistently.
  */
 
-export function normalizeSubMenuKey(val: any): string {
+/**
+ * Tipe input yang diterima oleh fungsi-fungsi mapping sub-menu:
+ * bisa berupa slug/string langsung, atau objek sub-menu dari Supabase.
+ */
+export type SubMenuKeyInput =
+  | string
+  | number
+  | null
+  | undefined
+  | {
+      id?: string | number | null;
+      slug?: string;
+      name?: string;
+      sub_menu_name?: string;
+      title?: string;
+    };
+
+export function normalizeSubMenuKey(val: SubMenuKeyInput): string {
   if (!val) return '';
   
-  let rawStr = '';
+  let rawStr: string;
   if (typeof val === 'object') {
     const idStr = String(val.id || '').trim();
     if (['pa', 'pt', 'gp', 'pkb', 'pkp', 'germasalh', 'pg', 'inforkom-litbang'].includes(idStr.toLowerCase())) {
@@ -27,7 +44,7 @@ export function normalizeSubMenuKey(val: any): string {
   // URL decode if needed (e.g., Pelkat%20/%20Komisi%20PA)
   try {
     rawStr = decodeURIComponent(rawStr);
-  } catch (e) {}
+  } catch { /* abaikan error decode */ }
 
   const lower = rawStr.toLowerCase();
 
@@ -43,7 +60,7 @@ export function normalizeSubMenuKey(val: any): string {
   return rawStr;
 }
 
-export function getSubMenuDisplayName(val: any): string {
+export function getSubMenuDisplayName(val: SubMenuKeyInput): string {
   const normalized = normalizeSubMenuKey(val);
   switch (normalized) {
     case 'PA': return 'PA';

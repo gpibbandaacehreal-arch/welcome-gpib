@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getErrorMessage } from '../utils/errorUtils';
 import { type AdminProfile } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,8 +28,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       } else {
         setError(response.message || 'Terjadi kesalahan saat login.');
       }
-    } catch (err: any) {
-      setError(err?.message || 'Gagal menghubungkan ke server. Periksa koneksi internet Anda.');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal menghubungkan ke server. Periksa koneksi internet Anda.'));
       console.error(err);
     } finally {
       setIsLoading(false);

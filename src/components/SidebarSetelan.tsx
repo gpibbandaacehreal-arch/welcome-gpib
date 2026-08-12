@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { compressImage, toImageKitUrl, uploadImageToCloud } from '../utils/imageUtils';
+import { getErrorMessage } from '../utils/errorUtils';
 import { supabase } from '../services/supabase';
 
 interface SidebarSetelanProps {
@@ -51,9 +52,9 @@ const SidebarSetelan: React.FC<SidebarSetelanProps> = ({
           const compressed = await compressImage(base64, 400, 0.7); // Logo tidak butuh besar
           const publicUrl = await uploadImageToCloud(compressed);
           setSiteLogo(publicUrl);
-        } catch (error: any) {
+        } catch (error) {
           console.error('Gagal mengunggah logo:', error);
-          alert('Gagal mengunggah logo ke cloud storage: ' + error.message);
+          alert('Gagal mengunggah logo ke cloud storage: ' + getErrorMessage(error));
           e.target.value = '';
         } finally {
           setIsUploadingLogo(false);
@@ -100,9 +101,9 @@ const SidebarSetelan: React.FC<SidebarSetelanProps> = ({
 
       setBerandaPdf(publicUrl);
       alert('PDF berhasil diunggah!');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error uploading PDF:', error);
-      alert('Gagal mengunggah PDF: ' + error.message);
+      alert('Gagal mengunggah PDF: ' + getErrorMessage(error));
     } finally {
       setIsUploadingPdf(false);
     }
