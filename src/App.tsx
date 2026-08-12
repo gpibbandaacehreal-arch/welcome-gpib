@@ -17,6 +17,7 @@ import { normalizeSubMenuKey } from './utils/menuUtils'
 import { siteSettingsService, type SiteSettings } from './services/siteSettings'
 import { getErrorMessage } from './utils/errorUtils'
 import type { EditorSaveData } from './components/AdminDashboard'
+import { fetchFromGoogleScript, postToGoogleScript } from './services/googleScript'
 
 
 // Types
@@ -54,8 +55,6 @@ interface FullContent {
   umat: UmatRecord[];
   proposals: SupabaseProposal[]; // New field for shared proposal history
 }
-
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbycROw7gCO_xEwHmberQzMDfUf_nJIRVUuN-90o7DpSrhV1p8yZhQEqCUL9LEB_I-WF0g/exec';
 
 const DEFAULT_CONTENT: FullContent = {
   settings: {
@@ -143,6 +142,7 @@ function App() {
   })
   
   const [isLoading, setIsLoading] = useState(true)
+  const [syncError, setSyncError] = useState(false)
   const [supabaseProposals, setSupabaseProposals] = useState<SupabaseProposal[]>([])
   
   // Editor states
@@ -201,10 +201,8 @@ function App() {
   const fetchData = async (isSilent = false) => {
     if (!isSilent) console.log("Memulai pengambilan data dari Google Drive...");
     try {
-      const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`)
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      
-      const data = await response.json()
+      const data = await fetchFromGoogleScript() as Partial<FullContent>
+      setSyncError(false)
       if (!isSilent) console.log("Data berhasil diambil dari Drive:", data);
       
       if (data && (data.settings || data.pages)) {
@@ -250,21 +248,30 @@ function App() {
       }
     } catch (error) {
       if (!isSilent) console.error("Gagal mengambil data dari Google Drive:", error)
+      setSyncError(true)
     } finally {
       if (!isSilent) setIsLoading(false)
     }
   }
 
-  // Fetch data on mount and setup polling
+  // Fetch data on mount (sekali) + batasi loading screen agar tidak menunggu
+  // fetch eksternal yang lambat. Konten cache langsung tampil, fetch di latar belakang.
   useEffect(() => {
     // Panggil async lewat timer agar tidak ada setState sinkron di body effect
     const initialTimer = setTimeout(() => { void fetchData() }, 0)
-    const interval = setInterval(() => { void fetchData(true) }, 15000) // Increased interval slightly
+    const loadingCap = setTimeout(() => setIsLoading(false), 2500)
     return () => {
       clearTimeout(initialTimer)
-      clearInterval(interval)
+      clearTimeout(loadingCap)
     }
   }, [])
+
+  // Polling adaptif: saat sinkron bermasalah (syncError), jeda diperpanjang ke 60 detik
+  // agar tidak terus menghantam endpoint yang rusak; kembali ke 15 detik saat pulih.
+  useEffect(() => {
+    const interval = setInterval(() => { void fetchData(true) }, syncError ? 60000 : 15000)
+    return () => clearInterval(interval)
+  }, [syncError])
 
   const fetchSupabaseProposals = async () => {
     console.log('Memulai fetch proposal dari Supabase...');
@@ -375,13 +382,7 @@ function App() {
     await siteSettingsService.saveSettings(newSettings);
 
     try {
-      const payload = JSON.stringify({ action: 'updateContent', data: updatedContent });
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: payload,
-      });
+      await postToGoogleScript({ action: 'updateContent', data: updatedContent });
     } catch (err) {
       console.error('Gagal mempublikasi kustomisasi ke Google Drive:', err);
     }
@@ -439,19 +440,13 @@ function App() {
     localStorage.setItem('gpibSiteContent', JSON.stringify(newContent))
 
     try {
-      const payload = JSON.stringify({ action: 'updateContent', data: newContent });
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: payload,
-      })
+      await postToGoogleScript({ action: 'updateContent', data: newContent })
       if (updatedData) {
-        alert('Perubahan telah dikirim! \n\nCatatan: Mohon tunggu 5 detik sebelum merefresh halaman.');
+        alert('Perubahan berhasil disimpan secara lokal. Sinkronisasi ke Google Drive berjalan otomatis — mohon tunggu beberapa detik sebelum merefresh halaman.');
       }
     } catch (error) {
       console.error("Gagal menyimpan ke Google Drive:", error)
-      alert('Gagal sinkron ke Google Drive.');
+      alert('Gagal sinkron ke Google Drive. Perubahan tetap tersimpan secara lokal.');
     } finally {
       setIsSaving(false)
     }
@@ -473,13 +468,8 @@ function App() {
     localStorage.setItem('gpibSiteContent', JSON.stringify(newContent))
 
     try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'updateUmat', data: newContent.umat }),
-      })
-      alert('Data Umat Berhasil Disimpan!')
+      await postToGoogleScript({ action: 'updateUmat', data: newContent.umat })
+      alert('Data umat berhasil disimpan secara lokal & dikirim untuk disinkronkan ke Google Drive.')
     } catch (error) {
       console.error("Gagal sinkron data umat:", error)
     }
@@ -499,13 +489,8 @@ function App() {
       localStorage.setItem('gpibSiteContent', JSON.stringify(newContent))
 
       try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: 'updateUmat', data: newContent.umat }),
-        })
-        alert('Data Umat Berhasil Dihapus!')
+        await postToGoogleScript({ action: 'updateUmat', data: newContent.umat })
+        alert('Data umat berhasil dihapus secara lokal & dikirim untuk disinkronkan ke Google Drive.')
       } catch (error) {
         console.error("Gagal menghapus data umat:", error)
       }
@@ -530,13 +515,8 @@ function App() {
     localStorage.setItem('gpibSiteContent', JSON.stringify(newContent));
 
     try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'updateUmat', data: newContent.umat }),
-      });
-      alert('Data Umat Berhasil Disimpan & Diverifikasi!');
+      await postToGoogleScript({ action: 'updateUmat', data: newContent.umat });
+      alert('Data umat berhasil diverifikasi & disimpan (sinkronisasi otomatis ke Google Drive).');
     } catch (error) {
       console.error("Gagal verifikasi data umat:", error);
     }
@@ -551,13 +531,8 @@ function App() {
       localStorage.setItem('gpibSiteContent', JSON.stringify(newContent));
 
       try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: 'updateUmat', data: newContent.umat }),
-        });
-        alert('Pengajuan Berhasil Dihapus!');
+        await postToGoogleScript({ action: 'updateUmat', data: newContent.umat });
+        alert('Pengajuan berhasil dihapus (sinkronisasi otomatis ke Google Drive).');
       } catch (error) {
         console.error("Gagal menghapus pengajuan:", error);
       }
@@ -658,13 +633,7 @@ function App() {
       localStorage.setItem('gpibSiteContent', JSON.stringify(newContent));
 
       // Persist everything to Google Drive
-      const payload = JSON.stringify({ action: 'updateUmat', data: newContent.umat });
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: payload
-      });
+      await postToGoogleScript({ action: 'updateUmat', data: newContent.umat });
       
       setUserSubmitMessage('Data berhasil dikirim untuk di verifikasi admin GPIB');
       setShowUserForm(false);
@@ -1306,6 +1275,33 @@ function App() {
 
   const renderMainLayout = () => (
     <div className="app-container" style={appContainerStyle}>
+      {syncError && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          color: '#92400e',
+          borderBottom: '1px solid #fcd34d',
+          padding: '10px 20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '12px',
+          fontSize: '0.9rem',
+          fontFamily: "'Inter', sans-serif",
+        }}>
+          <span>
+            {isLoggedIn
+              ? '⚠️ Sinkronisasi data dengan Google Drive gagal — konten mungkin tidak terbarui. Periksa deployment Google Apps Script.'
+              : '⚠️ Data mungkin belum terbarui — gagal menyinkronkan dengan server.'}
+          </span>
+          <button
+            onClick={() => setSyncError(false)}
+            title="Tutup"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#92400e', fontSize: '1rem', fontWeight: 700, padding: '4px 8px' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
       <header className="header" style={headerInlineStyle}>
         <div className="logo-container">
           <img src={toImageKitUrl(siteContent.settings.logo, 400)} alt="Logo GPIB" />
