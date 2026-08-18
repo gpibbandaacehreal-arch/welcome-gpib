@@ -22,7 +22,7 @@ import { fetchFromGoogleScript, postToGoogleScript } from './services/googleScri
 
 // Types
 type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Organisasi Gereja' | 'Data Umat' | 'Download' | 'Login' 
-  | 'PA' | 'PT' | 'GP' | 'PKB' | 'PKP' 
+  | 'PA' | 'PT' | 'GP' | 'PKB' | 'PKP' | 'PKLU' 
   | 'GermasaLH' | 'PG' | 'Inforkom-Litbang' | 'APanel' | (string & {});
 
 
@@ -95,6 +95,10 @@ const DEFAULT_CONTENT: FullContent = {
       title: 'Persekutuan Kaum Bapak (PKB)',
       content: '<p><strong>Tugas Pokok:</strong><br>Melaksanakan pelayanan dan pembinaan kepada kaum bapak/pria di jemaat.</p><p><strong>Fungsi:</strong><br>1. Menguatkan peran bapak sebagai imam dalam keluarga Kristen.<br>2. Membangun persekutuan bapak yang solider dan bertanggung jawab terhadap pelayanan gereja.<br>3. Menyelenggarakan kegiatan yang mendukung pertumbuhan iman dan tanggung jawab profesi.</p>'
     },
+    'PKLU': {
+      title: 'Persekutuan Kaum Lanjut Usia (PKLU)',
+      content: '<p><strong>Tugas Pokok:</strong><br>Melaksanakan pelayanan dan pembinaan kepada kaum lanjut usia/pensiunan di jemaat.</p><p><strong>Fungsi:</strong><br>1. Memberikan perhatian dan pendampingan rohani kepada lansia jemaat.<br>2. Menyelenggarakan persekutuan dan kegiatan yang mendukung kesehatan serta kesejahteraan lansia.<br>3. Menjadi wadah berbagi pengalaman hidup iman dan kebijaksanaan antargenerasi.</p>'
+    },
     'GermasaLH': {
       title: 'Komisi Gereja, Masyarakat, Agama dan Lingkungan Hidup (GermasaLH)',
       content: '<p><strong>Tugas Pokok:</strong><br>Menangani urusan hubungan gereja dengan masyarakat, antarumat beragama, serta kelestarian lingkungan hidup.</p><p><strong>Fungsi:</strong><br>1. Membangun dialog dan kerjasama oikumenis serta antariman di Banda Aceh.<br>2. Melaksanakan aksi sosial dan advokasi terhadap isu-isu kemasyarakatan.<br>3. Mengedukasi jemaat dalam upaya pelestarian lingkungan hidup.</p>'
@@ -111,6 +115,12 @@ const DEFAULT_CONTENT: FullContent = {
   umat: [],
   proposals: []
 };
+
+// Interval polling sinkronisasi Google Drive (detik). Setiap pengunjung memicu
+// request ke Apps Script, jadi interval harus cukup longgar agar hemat kuota.
+const POLL_INTERVAL_NORMAL = 60_000; // tab aktif
+const POLL_INTERVAL_ERROR = 120_000; // saat sinkron bermasalah
+const POLL_INTERVAL_HIDDEN = 300_000; // tab tidak terlihat
 
 function App() {
   const { user, profile, logout: authLogout } = useAuth();
@@ -141,7 +151,15 @@ function App() {
     return DEFAULT_CONTENT
   })
   
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(() => {
+    // Pengunjung ulang dengan cache lokal langsung melihat konten tanpa menunggu
+    // cap 2,5 dtk / fetch eksternal — sinkronisasi tetap berjalan di latar belakang.
+    try {
+      return !localStorage.getItem('gpibSiteContent')
+    } catch {
+      return true
+    }
+  })
   const [syncError, setSyncError] = useState(false)
   const [supabaseProposals, setSupabaseProposals] = useState<SupabaseProposal[]>([])
   
@@ -270,18 +288,24 @@ function App() {
   }, [])
 
   // Polling adaptif non-tumpang-tindih: poll berikutnya baru dijadwalkan SETELAH
-  // poll sebelumnya selesai (Apps Script bisa lambat, ~10-25 dtk). Saat sinkron
-  // bermasalah (syncError), jeda diperpanjang ke 60 detik; kembali ke 15 detik saat pulih.
+  // poll sebelumnya selesai (Apps Script bisa lambat, ~10-25 dtk). Interval dinaikkan
+  // dari 15 dtk karena SETIAP pengunjung memicu request ke Apps Script — polling
+  // agresif cepat menghabiskan kuota server. Saat tab tersembunyi, polling dijeda.
   useEffect(() => {
     let cancelled = false
     let timer: ReturnType<typeof setTimeout>
     const poll = async () => {
+      // Tab tidak terlihat: tidak ada gunanya sinkron di background
+      if (document.hidden) {
+        if (!cancelled) timer = setTimeout(poll, POLL_INTERVAL_HIDDEN)
+        return
+      }
       await fetchData(true)
       if (!cancelled) {
-        timer = setTimeout(poll, syncError ? 60000 : 15000)
+        timer = setTimeout(poll, syncError ? POLL_INTERVAL_ERROR : POLL_INTERVAL_NORMAL)
       }
     }
-    timer = setTimeout(poll, syncError ? 60000 : 15000)
+    timer = setTimeout(poll, syncError ? POLL_INTERVAL_ERROR : POLL_INTERVAL_NORMAL)
     return () => {
       cancelled = true
       clearTimeout(timer)
@@ -311,10 +335,13 @@ function App() {
     }
   };
 
+  // Riwayat download + realtime Supabase hanya aktif saat tab Download dibuka —
+  // hemat bandwidth & koneksi websocket untuk pengunjung yang tidak membutuhkannya.
   useEffect(() => {
-    console.log('Setting up Supabase real-time channel...');
-    const initialTimer = setTimeout(() => { void fetchSupabaseProposals(); }, 0);
+    if (activeTab !== 'Download') return;
 
+    // Timer 0 ms agar tidak ada setState sinkron di body effect (pola react-hooks)
+    const initialTimer = setTimeout(() => { void fetchSupabaseProposals(); }, 0);
     const channel = supabase
       .channel('public:riwayat_download')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'riwayat_download' }, (payload) => {
@@ -330,7 +357,7 @@ function App() {
       clearTimeout(initialTimer);
       void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [activeTab]);
 
   // Sinkronkan field editor saat tab berubah (hanya saat login) — pola "adjust state during render"
   const [lastEditorSyncKey, setLastEditorSyncKey] = useState('')
@@ -1342,7 +1369,7 @@ function App() {
             Jadwal Ibadah
           </li>
           
-          <li className={`dropdown ${['Organisasi Gereja', 'PA', 'PT', 'GP', 'PKB', 'PKP', 'GermasaLH', 'PG', 'Inforkom-Litbang', ...customPelkatMenus.map(m => m.name), ...customKomisiMenus.map(m => m.name)].includes(activeTab) ? 'active' : ''} ${isDropdownOpen ? 'dropdown-open' : ''}`}>
+          <li className={`dropdown ${['Organisasi Gereja', 'PA', 'PT', 'GP', 'PKB', 'PKP', 'PKLU', 'GermasaLH', 'PG', 'Inforkom-Litbang', ...customPelkatMenus.map(m => m.name), ...customKomisiMenus.map(m => m.name)].includes(activeTab) ? 'active' : ''} ${isDropdownOpen ? 'dropdown-open' : ''}`}>
             <span onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
               Organisasi Gereja {isDropdownOpen ? '▴' : '▾'}
             </span>
@@ -1356,6 +1383,7 @@ function App() {
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('GP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Gerakan Pemuda (GP)</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKB'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Bapak (PKB)</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Perempuan (PKP)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKLU'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Lanjut Usia (PKLU)</li>
                   {customPelkatMenus.map(m => (
                     <li key={m.id} onClick={(e) => { e.stopPropagation(); setActiveTab(m.name); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>{m.name}</li>
                   ))}
