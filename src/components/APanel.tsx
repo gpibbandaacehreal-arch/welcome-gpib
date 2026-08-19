@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { uploadImageToCloud, toImageKitUrl } from '../utils/imageUtils';
 import { getErrorMessage } from '../utils/errorUtils';
-import type { SiteSettings, CustomMenuItem } from '../services/siteSettings';
+import type { SiteSettings, CustomMenuItem, MenuOverride, FolderLinkItem } from '../services/siteSettings';
+
+/** Built-in menu items that admins can override (rename / hide / close) */
+const BUILTIN_MENUS = [
+  { key: 'Beranda', label: 'Beranda' },
+  { key: 'Jadwal Ibadah', label: 'Jadwal Ibadah' },
+  { key: 'Organisasi Gereja', label: 'Organisasi Gereja' },
+  { key: 'Data Umat', label: 'Data Umat' },
+  { key: 'Download', label: 'Download' },
+];
 
 interface APanelProps {
   settings: SiteSettings;
@@ -59,7 +68,7 @@ const COLOR_PRESETS_SITE_BG = [
 ];
 
 export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'header' | 'menu' | 'theme'>('header');
+  const [activeTab, setActiveTab] = useState<'header' | 'menu' | 'theme' | 'menuManage'>('header');
   
   // Settings State
   const [siteTitle, setSiteTitle] = useState(settings.title || 'GPIB BANDA ACEH');
@@ -83,6 +92,14 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
   const [newMenuName, setNewMenuName] = useState('');
   const [newMenuCategory, setNewMenuCategory] = useState<'UTAMA' | 'PELKAT' | 'KOMISI'>('UTAMA');
   const [newMenuSlug, setNewMenuSlug] = useState('');
+
+  // Menu Override State (rename / hide / close built-in menus)
+  const [menuOverrides, setMenuOverrides] = useState<MenuOverride[]>(settings.menuOverrides || []);
+
+  // Folder Links State
+  const [folderLinks, setFolderLinks] = useState<FolderLinkItem[]>(settings.folderLinks || []);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderUrl, setNewFolderUrl] = useState('');
 
   // Upload & Status states
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -158,6 +175,44 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
     }
   };
 
+  // Menu Override: update or add an override for a built-in menu
+  const handleSetMenuOverride = (builtinKey: string, updates: Partial<MenuOverride>) => {
+    setMenuOverrides(prev => {
+      const existing = prev.find(o => o.builtinKey === builtinKey);
+      if (existing) {
+        return prev.map(o => o.builtinKey === builtinKey ? { ...o, ...updates } : o);
+      }
+      return [...prev, { builtinKey, ...updates }];
+    });
+  };
+
+  const handleResetMenuOverride = (builtinKey: string) => {
+    setMenuOverrides(prev => prev.filter(o => o.builtinKey !== builtinKey));
+    setMessage({ type: 'success', text: `Override untuk "${builtinKey}" berhasil di-reset.` });
+  };
+
+  // Folder Links: add
+  const handleAddFolderLink = () => {
+    if (!newFolderName.trim()) { alert('Nama folder harus diisi!'); return; }
+    if (!newFolderUrl.trim()) { alert('Link URL harus diisi!'); return; }
+    const item: FolderLinkItem = { id: `folder_${Date.now()}`, name: newFolderName.trim(), url: newFolderUrl.trim(), isActive: true };
+    setFolderLinks(prev => [...prev, item]);
+    setNewFolderName('');
+    setNewFolderUrl('');
+    setMessage({ type: 'success', text: `Folder "${item.name}" berhasil ditambahkan!` });
+  };
+
+  const handleDeleteFolderLink = (id: string) => {
+    if (window.confirm('Hapus folder link ini?')) {
+      setFolderLinks(prev => prev.filter(f => f.id !== id));
+      setMessage({ type: 'success', text: 'Folder link berhasil dihapus.' });
+    }
+  };
+
+  const handleToggleFolderLink = (id: string) => {
+    setFolderLinks(prev => prev.map(f => f.id === id ? { ...f, isActive: !f.isActive } : f));
+  };
+
   // Save All Settings
   const handleSaveAll = async () => {
     setIsSaving(true);
@@ -180,6 +235,8 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
       primaryColor,
       siteBgColor,
       customMenus,
+      menuOverrides,
+      folderLinks,
     };
 
     try {
@@ -290,6 +347,26 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
           }}
         >
           🎨 Warna & Tema Situs
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('menuManage')}
+          style={{
+            padding: '12px 20px',
+            border: 'none',
+            borderBottom: activeTab === 'menuManage' ? '3px solid #8b0000' : '3px solid transparent',
+            backgroundColor: activeTab === 'menuManage' ? '#f8fafc' : 'transparent',
+            color: activeTab === 'menuManage' ? '#8b0000' : '#64748b',
+            fontWeight: '600',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          🔧 Kelola Menu
         </button>
       </div>
 
@@ -716,6 +793,215 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: KELOLA MENU — Rename / Hide / Delete + Folder Links */}
+      {activeTab === 'menuManage' && (
+        <div style={{ backgroundColor: '#f8fafc', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '30px' }}>
+          <h3 style={{ marginTop: 0, color: '#1e293b', fontSize: '1.25rem' }}>🔧 Kelola Menu — Rename, Sembunyikan, Hapus & Folder Links</h3>
+
+          {/* ───── A. MENU BUILT-IN OVERRIDES ───── */}
+          <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #cbd5e1', marginBottom: '25px' }}>
+            <h4 style={{ marginTop: 0, color: '#0f172a', fontSize: '1.1rem' }}>🏷️ Ganti Nama / Sembunyikan Menu Bawaan</h4>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 18px 0' }}>
+              Ubah nama menu bawaan, sembunyikan dari user non-login, atau tutup otomatis pada tanggal tertentu.
+            </p>
+
+            <div className="table-responsive">
+              <table className="umat-table admin-table" style={{ width: '100%', backgroundColor: '#ffffff', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f1f5f9' }}>
+                    <th style={{ padding: '10px', textAlign: 'left' }}>Menu Asli</th>
+                    <th style={{ padding: '10px', textAlign: 'left' }}>Nama Tampilan (Opsional)</th>
+                    <th style={{ padding: '10px', textAlign: 'left' }}>Sembunyi dari Non-Login?</th>
+                    <th style={{ padding: '10px', textAlign: 'left' }}>Tutup Otomatis (Tanggal)</th>
+                    <th style={{ padding: '10px', textAlign: 'center', width: '80px' }}>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {BUILTIN_MENUS.map(bm => {
+                    const ov = menuOverrides.find(o => o.builtinKey === bm.key);
+                    return (
+                      <tr key={bm.key} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '10px', fontWeight: '600' }}>{bm.label}</td>
+                        <td style={{ padding: '10px' }}>
+                          <input
+                            type="text"
+                            placeholder={bm.label}
+                            value={ov?.displayName || ''}
+                            onChange={(e) => handleSetMenuOverride(bm.key, { displayName: e.target.value || undefined })}
+                            style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '100%', fontSize: '0.85rem' }}
+                          />
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                          <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.85rem' }}>
+                            <input
+                              type="checkbox"
+                              checked={ov?.hidden || false}
+                              onChange={(e) => handleSetMenuOverride(bm.key, { hidden: e.target.checked })}
+                            />
+                            Sembunyi
+                          </label>
+                        </td>
+                        <td style={{ padding: '10px' }}>
+                          <input
+                            type="date"
+                            value={ov?.hideAfterDate || ''}
+                            onChange={(e) => handleSetMenuOverride(bm.key, { hideAfterDate: e.target.value || undefined })}
+                            style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                          />
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                          {ov && (
+                            <button
+                              type="button"
+                              onClick={() => handleResetMenuOverride(bm.key)}
+                              style={{ padding: '4px 8px', fontSize: '0.75rem', backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer' }}
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ───── B. CUSTOM MENU TABLE (rekap) ───── */}
+          <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #cbd5e1', marginBottom: '25px' }}>
+            <h4 style={{ marginTop: 0, color: '#0f172a', fontSize: '1.1rem' }}>📋 Ringkasan Menu Kustom Aktif ({customMenus.length})</h4>
+            {customMenus.length > 0 ? (
+              <div className="table-responsive" style={{ marginTop: '12px' }}>
+                <table className="umat-table admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f1f5f9' }}>
+                      <th style={{ padding: '10px', textAlign: 'left' }}>Nama Menu</th>
+                      <th style={{ padding: '10px', textAlign: 'left' }}>Kategori</th>
+                      <th style={{ padding: '10px', textAlign: 'left' }}>Target Slug</th>
+                      <th style={{ padding: '10px', textAlign: 'center', width: '80px' }}>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customMenus.map(menu => (
+                      <tr key={menu.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '10px' }}><strong>{menu.name}</strong></td>
+                        <td style={{ padding: '10px' }}>
+                          <span style={{ backgroundColor: menu.category === 'UTAMA' ? '#e0f2fe' : menu.category === 'PELKAT' ? '#fef3c7' : '#f3e8ff', color: menu.category === 'UTAMA' ? '#0369a1' : menu.category === 'PELKAT' ? '#b45309' : '#6b21a8', padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>
+                            {menu.category}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px', fontFamily: 'monospace', fontSize: '0.85rem' }}>{menu.targetSlug}</td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomMenu(menu.id)}
+                            style={{ padding: '5px 10px', fontSize: '0.8rem', backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer' }}
+                          >
+                            🗑️ Hapus
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Belum ada menu kustom. Tambahkan di tab "Menu Navigasi & Font".</p>
+            )}
+          </div>
+
+          {/* ───── C. FOLDER LINKS ───── */}
+          <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #cbd5e1', marginBottom: '25px' }}>
+            <h4 style={{ marginTop: 0, color: '#0f172a', fontSize: '1.1rem' }}>
+              📁 Folder Links (Tampilan User — Menu Baru "DOWNLOAD")
+            </h4>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 18px 0' }}>
+              Tambahkan item folder yang akan ditampilkan sebagai ikon folder di halaman user. Setiap folder mengarah ke link Google Drive atau layanan drive lainnya.
+            </p>
+
+            {/* Form tambah folder */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px', alignItems: 'flex-end' }}>
+              <div style={{ flex: 1, minWidth: '180px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Nama Folder (Judul):</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Surat Edaran"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              <div style={{ flex: 2, minWidth: '250px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Link Google Drive / URL:</label>
+                <input
+                  type="url"
+                  placeholder="https://drive.google.com/drive/folders/..."
+                  value={newFolderUrl}
+                  onChange={(e) => setNewFolderUrl(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleAddFolderLink}
+                style={{ padding: '8px 18px', fontSize: '0.9rem', fontWeight: '600', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                ➕ Tambah Folder
+              </button>
+            </div>
+
+            {/* Daftar folder */}
+            {folderLinks.length > 0 ? (
+              <div className="table-responsive">
+                <table className="umat-table admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f1f5f9' }}>
+                      <th style={{ padding: '10px', textAlign: 'left' }}>Nama Folder</th>
+                      <th style={{ padding: '10px', textAlign: 'left' }}>URL / Link</th>
+                      <th style={{ padding: '10px', textAlign: 'center', width: '80px' }}>Aktif</th>
+                      <th style={{ padding: '10px', textAlign: 'center', width: '80px' }}>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {folderLinks.map(f => (
+                      <tr key={f.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '10px', fontWeight: '600' }}>{f.name}</td>
+                        <td style={{ padding: '10px', fontFamily: 'monospace', fontSize: '0.8rem', wordBreak: 'break-all' }}>
+                          <a href={f.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb' }}>{f.url}</a>
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleFolderLink(f.id)}
+                            style={{ padding: '4px 10px', fontSize: '0.8rem', borderRadius: '4px', cursor: 'pointer', border: 'none', backgroundColor: f.isActive ? '#dcfce7' : '#fef2f2', color: f.isActive ? '#15803d' : '#b91c1c', fontWeight: '600' }}
+                          >
+                            {f.isActive ? '✅ Aktif' : '🚫 Nonaktif'}
+                          </button>
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteFolderLink(f.id)}
+                            style={{ padding: '4px 8px', fontSize: '0.75rem', backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer' }}
+                          >
+                            🗑️ Hapus
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p style={{ color: '#64748b', fontSize: '0.9rem', textAlign: 'center', padding: '15px' }}>
+                Belum ada folder link. Tambahkan folder di atas untuk ditampilkan di halaman user.
+              </p>
+            )}
           </div>
         </div>
       )}

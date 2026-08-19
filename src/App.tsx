@@ -14,14 +14,14 @@ import { supabase, type SupabaseProposal } from './services/supabase'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import { normalizeSubMenuKey } from './utils/menuUtils'
-import { siteSettingsService, type SiteSettings } from './services/siteSettings'
+import { siteSettingsService, type SiteSettings, type MenuOverride, type FolderLinkItem } from './services/siteSettings'
 import { getErrorMessage } from './utils/errorUtils'
 import type { EditorSaveData } from './components/AdminDashboard'
 import { fetchFromGoogleScript, postToGoogleScript } from './services/googleScript'
 
 
 // Types
-type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Organisasi Gereja' | 'Data Umat' | 'Download' | 'Login' 
+type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Organisasi Gereja' | 'Data Umat' | 'Download' | 'FolderLinks' | 'Login' 
   | 'PA' | 'PT' | 'GP' | 'PKB' | 'PKP' | 'PKLU' 
   | 'GermasaLH' | 'PG' | 'Inforkom-Litbang' | 'APanel' | (string & {});
 
@@ -1154,6 +1154,54 @@ function App() {
       )
     }
 
+    if (activeTab === 'FolderLinks') {
+      const activeFolderLinks = folderLinks;
+      return (
+        <div className="page-card">
+          <h2>📁 Download</h2>
+          <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '25px' }}>
+            Klik pada folder di bawah ini untuk mengakses file di Google Drive atau layanan drive lainnya.
+          </p>
+          {activeFolderLinks.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '20px' }}>
+              {activeFolderLinks.map(folder => (
+                <a
+                  key={folder.id}
+                  href={folder.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '24px 16px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    textDecoration: 'none',
+                    color: '#1e293b',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.12)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                >
+                  <span style={{ fontSize: '3rem', marginBottom: '10px', lineHeight: 1 }}>📂</span>
+                  <span style={{ fontWeight: '600', fontSize: '0.95rem', textAlign: 'center' }}>{folder.name}</span>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+              <p style={{ fontSize: '2rem', marginBottom: '10px' }}>📁</p>
+              <p>Belum ada folder tersedia.</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     const pageKey = normalizeSubMenuKey(activeTab) || activeTab;
     const currentPage = siteContent.pages[pageKey] || siteContent.pages[activeTab] || {
       title: pageKey === 'PA' ? 'Pelayanan Anak (PA)' :
@@ -1280,6 +1328,31 @@ function App() {
   const customUtamaMenus = siteContent.settings.customMenus?.filter(m => m.category === 'UTAMA' && m.isActive !== false && !isKelolaAdmin(m.name)) || [];
   const customPelkatMenus = siteContent.settings.customMenus?.filter(m => m.category === 'PELKAT' && m.isActive !== false && !isKelolaAdmin(m.name)) || [];
   const customKomisiMenus = siteContent.settings.customMenus?.filter(m => m.category === 'KOMISI' && m.isActive !== false && !isKelolaAdmin(m.name)) || [];
+
+  // Menu override helpers: rename / hide / close built-in menus
+  const menuOverrides: MenuOverride[] = siteContent.settings.menuOverrides || [];
+  const folderLinks: FolderLinkItem[] = (siteContent.settings.folderLinks || []).filter(f => f.isActive !== false);
+
+  /** Check if a built-in menu key should be hidden (for non-logged-in users) */
+  const isBuiltinMenuHidden = (builtinKey: string): boolean => {
+    const ov = menuOverrides.find(o => o.builtinKey === builtinKey);
+    if (!ov) return false;
+    // explicit hide
+    if (ov.hidden && !isLoggedIn) return true;
+    // date-based close
+    if (ov.hideAfterDate) {
+      const closeDate = new Date(ov.hideAfterDate);
+      if (new Date() >= closeDate) return true;
+    }
+    return false;
+  };
+
+  /** Get display name for a built-in menu (renamed or original) */
+  const getBuiltinMenuLabel = (builtinKey: string, fallback: string): string => {
+    const ov = menuOverrides.find(o => o.builtinKey === builtinKey);
+    return ov?.displayName?.trim() || fallback;
+  };
+
 
   const headerBgImage = siteContent.settings.headerBgImage;
   const headerBgOverlay = siteContent.settings.headerBgOverlay || 'rgba(0,0,0,0.2)';
@@ -1445,12 +1518,25 @@ function App() {
             </li>
           )}
 
-          <li 
-            className={activeTab === 'Download' ? 'active' : ''}
-            onClick={() => { setActiveTab('Download'); setIsMobileMenuOpen(false); navigate('/'); }}
-          >
-            Download
-          </li>
+          {/* Download/Proposal menu — respect overrides (rename, hide, close) */}
+          {!isBuiltinMenuHidden('Download') && (
+            <li 
+              className={activeTab === 'Download' ? 'active' : ''}
+              onClick={() => { setActiveTab('Download'); setIsMobileMenuOpen(false); navigate('/'); }}
+            >
+              {getBuiltinMenuLabel('Download', 'Download')}
+            </li>
+          )}
+
+          {/* Folder Links menu — only shown if there are active folder links */}
+          {folderLinks.length > 0 && (
+            <li 
+              className={activeTab === 'FolderLinks' ? 'active' : ''}
+              onClick={() => { setActiveTab('FolderLinks'); setIsMobileMenuOpen(false); navigate('/'); }}
+            >
+              📁 Download
+            </li>
+          )}
         </ul>
       </nav>
 

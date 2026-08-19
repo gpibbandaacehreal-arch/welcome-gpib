@@ -11,6 +11,22 @@ export interface CustomMenuItem {
   isActive?: boolean;
 }
 
+/** Override for built-in menu items (rename, hide, or close on a date) */
+export interface MenuOverride {
+  builtinKey: string;       // Original built-in menu key (e.g. 'Download', 'Beranda')
+  displayName?: string;      // Renamed label shown in nav (e.g. 'PROPOSAL')
+  hidden?: boolean;          // Hide from non-logged-in users
+  hideAfterDate?: string;    // ISO date string — hide from ALL users after this date
+}
+
+/** A folder-link item displayed in the FOLDER-links menu */
+export interface FolderLinkItem {
+  id: string;
+  name: string;       // Display name (folder title)
+  url: string;        // External link (Google Drive, etc.)
+  isActive?: boolean;
+}
+
 export interface SiteSettings {
   logo: string;
   title: string;
@@ -29,6 +45,8 @@ export interface SiteSettings {
   primaryColor?: string;
   siteBgColor?: string;
   customMenus?: CustomMenuItem[];
+  menuOverrides?: MenuOverride[];
+  folderLinks?: FolderLinkItem[];
 }
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
@@ -48,7 +66,9 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   navTextColor: '#ffffff',
   primaryColor: '#8b0000',
   siteBgColor: '#ffffff',
-  customMenus: []
+  customMenus: [],
+  menuOverrides: [],
+  folderLinks: []
 };
 
 const LOCAL_STORAGE_KEY = 'gpib_site_settings';
@@ -93,7 +113,9 @@ export const siteSettingsService = {
           navTextColor: data.nav_text_color || cachedSettings.navTextColor || DEFAULT_SITE_SETTINGS.navTextColor,
           primaryColor: data.primary_color || cachedSettings.primaryColor || DEFAULT_SITE_SETTINGS.primaryColor,
           siteBgColor: data.site_bg_color || cachedSettings.siteBgColor || DEFAULT_SITE_SETTINGS.siteBgColor,
-          customMenus: Array.isArray(data.custom_menus) ? data.custom_menus : (cachedSettings.customMenus || [])
+          customMenus: Array.isArray(data.custom_menus) ? data.custom_menus : (cachedSettings.customMenus || []),
+          menuOverrides: Array.isArray(data.menu_overrides) ? data.menu_overrides : (cachedSettings.menuOverrides || []),
+          folderLinks: Array.isArray(data.folder_links) ? data.folder_links : (cachedSettings.folderLinks || [])
         };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(remoteSettings));
         return remoteSettings;
@@ -138,6 +160,8 @@ export const siteSettingsService = {
         primary_color: cleanSettings.primaryColor,
         site_bg_color: cleanSettings.siteBgColor,
         custom_menus: cleanSettings.customMenus || [],
+        menu_overrides: cleanSettings.menuOverrides || [],
+        folder_links: cleanSettings.folderLinks || [],
         updated_at: new Date().toISOString()
       };
 
