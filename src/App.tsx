@@ -1429,22 +1429,27 @@ function App() {
           {isMobileMenuOpen ? '✕' : '☰'} Menu
         </div>
         <ul className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-          <li 
-            className={activeTab === 'Beranda' ? 'active' : ''}
-            onClick={() => { setActiveTab('Beranda'); setIsMobileMenuOpen(false); navigate('/'); }}
-          >
-            Beranda
-          </li>
-          <li 
-            className={activeTab === 'Jadwal Ibadah' ? 'active' : ''}
-            onClick={() => { setActiveTab('Jadwal Ibadah'); setIsMobileMenuOpen(false); navigate('/'); }}
-          >
-            Jadwal Ibadah
-          </li>
+          {!isBuiltinMenuHidden('Beranda') && (
+            <li 
+              className={activeTab === 'Beranda' ? 'active' : ''}
+              onClick={() => { setActiveTab(getBuiltinMenuLabel('Beranda', 'Beranda')); setIsMobileMenuOpen(false); navigate('/'); }}
+            >
+              {getBuiltinMenuLabel('Beranda', 'Beranda')}
+            </li>
+          )}
+          {!isBuiltinMenuHidden('Jadwal Ibadah') && (
+            <li 
+              className={activeTab === 'Jadwal Ibadah' ? 'active' : ''}
+              onClick={() => { setActiveTab('Jadwal Ibadah'); setIsMobileMenuOpen(false); navigate('/'); }}
+            >
+              {getBuiltinMenuLabel('Jadwal Ibadah', 'Jadwal Ibadah')}
+            </li>
+          )}
           
+          {!isBuiltinMenuHidden('Organisasi Gereja') && (
           <li className={`dropdown ${['Organisasi Gereja', 'PA', 'PT', 'GP', 'PKB', 'PKP', 'PKLU', 'GermasaLH', 'PG', 'Inforkom-Litbang', ...customPelkatMenus.map(m => m.name), ...customKomisiMenus.map(m => m.name)].includes(activeTab) ? 'active' : ''} ${isDropdownOpen ? 'dropdown-open' : ''}`}>
             <span onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-              Organisasi Gereja {isDropdownOpen ? '▴' : '▾'}
+              {getBuiltinMenuLabel('Organisasi Gereja', 'Organisasi Gereja')} {isDropdownOpen ? '▴' : '▾'}
             </span>
             <ul className="dropdown-menu">
               <li onClick={() => { setActiveTab('Organisasi Gereja'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Struktur Organisasi</li>
@@ -1475,6 +1480,7 @@ function App() {
               </li>
             </ul>
           </li>
+          )}
 
           {customUtamaMenus.map(m => (
             <li 
@@ -1486,12 +1492,14 @@ function App() {
             </li>
           ))}
 
-          <li 
-            className={activeTab === 'Data Umat' ? 'active' : ''}
-            onClick={() => { setActiveTab('Data Umat'); setIsMobileMenuOpen(false); navigate('/'); }}
-          >
-            Data Umat
-          </li>
+          {!isBuiltinMenuHidden('Data Umat') && (
+            <li 
+              className={activeTab === 'Data Umat' ? 'active' : ''}
+              onClick={() => { setActiveTab('Data Umat'); setIsMobileMenuOpen(false); navigate('/'); }}
+            >
+              {getBuiltinMenuLabel('Data Umat', 'Data Umat')}
+            </li>
+          )}
 
           {isLoggedIn ? (
             <>
@@ -1528,13 +1536,13 @@ function App() {
             </li>
           )}
 
-          {/* Folder Links menu — only shown if there are active folder links */}
-          {folderLinks.length > 0 && (
+          {/* Folder Links menu — only shown if there are active folder links AND not hidden by override */}
+          {folderLinks.length > 0 && !isBuiltinMenuHidden('FolderLinks') && (
             <li 
               className={activeTab === 'FolderLinks' ? 'active' : ''}
               onClick={() => { setActiveTab('FolderLinks'); setIsMobileMenuOpen(false); navigate('/'); }}
             >
-              📁 Download
+              📁 {getBuiltinMenuLabel('FolderLinks', 'Download')}
             </li>
           )}
         </ul>

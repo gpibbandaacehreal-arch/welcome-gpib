@@ -10,6 +10,7 @@ const BUILTIN_MENUS = [
   { key: 'Organisasi Gereja', label: 'Organisasi Gereja' },
   { key: 'Data Umat', label: 'Data Umat' },
   { key: 'Download', label: 'Download' },
+  { key: 'FolderLinks', label: '📁 Download (Folder Links)' },
 ];
 
 interface APanelProps {
@@ -872,7 +873,56 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
             </div>
           </div>
 
-          {/* ───── B. CUSTOM MENU TABLE (rekap) ───── */}
+          {/* ───── B. TAMBAH MENU BARU ───── */}
+          <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #cbd5e1', marginBottom: '25px' }}>
+            <h4 style={{ marginTop: 0, color: '#0f172a', fontSize: '1.1rem' }}>➕ Tambah Menu Baru</h4>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 18px 0' }}>
+              Buat menu baru dengan nama, posisi, dan opsi rename / sembunyikan / hapus.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Nama Menu:</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Galeri Foto"
+                  value={newMenuName}
+                  onChange={(e) => setNewMenuName(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Posisi Menu:</label>
+                <select
+                  value={newMenuCategory}
+                  onChange={(e) => setNewMenuCategory(e.target.value as 'UTAMA' | 'PELKAT' | 'KOMISI')}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                >
+                  <option value="UTAMA">Navbar Utama (Navigasi Atas)</option>
+                  <option value="PELKAT">Submenu PELKAT</option>
+                  <option value="KOMISI">Submenu KOMISI</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Target Slug (Opsional):</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: galeri-foto"
+                  value={newMenuSlug}
+                  onChange={(e) => setNewMenuSlug(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddCustomMenu}
+              style={{ marginTop: '15px', padding: '10px 22px', fontSize: '0.9rem', fontWeight: '600', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+            >
+              ➕ Tambahkan Menu Baru
+            </button>
+          </div>
+
+          {/* ───── C. CUSTOM MENU TABLE (rekap) ───── */}
           <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #cbd5e1', marginBottom: '25px' }}>
             <h4 style={{ marginTop: 0, color: '#0f172a', fontSize: '1.1rem' }}>📋 Ringkasan Menu Kustom Aktif ({customMenus.length})</h4>
             {customMenus.length > 0 ? (
@@ -911,7 +961,7 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
                 </table>
               </div>
             ) : (
-              <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Belum ada menu kustom. Tambahkan di tab "Menu Navigasi & Font".</p>
+              <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Belum ada menu kustom. Gunakan form di atas untuk menambahkan menu baru.</p>
             )}
           </div>
 
