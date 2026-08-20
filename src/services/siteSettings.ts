@@ -14,6 +14,8 @@ export interface CustomMenuItem {
     id: string;
     name: string;
     url: string;
+    /** If true, non-admin users see a locked message instead of the link */
+    isLocked?: boolean;
   }>;
   isActive?: boolean;
 }

@@ -207,6 +207,19 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
     }));
   };
 
+  // Toggle lock/unlock on a folder item
+  const handleToggleLockItem = (menuId: string, itemId: string) => {
+    setCustomMenus(prev => prev.map(m => {
+      if (m.id !== menuId) return m;
+      return {
+        ...m,
+        items: m.items.map(it =>
+          it.id === itemId ? { ...it, isLocked: !it.isLocked } : it
+        )
+      };
+    }));
+  };
+
   // Add a new folder item to an existing custom menu
   const [addItemMenuId, setAddItemMenuId] = useState<string | null>(null);
   const [addItemName, setAddItemName] = useState('');
@@ -722,7 +735,7 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
                                 <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '0.78rem' }}>Icon</th>
                                 <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '0.78rem' }}>Nama Folder</th>
                                 <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '0.78rem' }}>Link URL</th>
-                                <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: '0.78rem', width: '60px' }}>Aksi</th>
+                                <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: '0.78rem', width: '110px' }}>Aksi</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -739,13 +752,31 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
                                     />
                                   </td>
                                   <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteMenuItem(menu.id, item.id)}
-                                      style={{ padding: '3px 6px', fontSize: '0.7rem', backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer' }}
-                                    >
-                                      🗑️
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleLockItem(menu.id, item.id)}
+                                        title={item.isLocked ? 'Klik untuk unlock folder' : 'Klik untuk lock folder (blokir akses non-admin)'}
+                                        style={{
+                                          padding: '3px 6px',
+                                          fontSize: '0.7rem',
+                                          backgroundColor: item.isLocked ? '#fef3c7' : '#f0fdf4',
+                                          color: item.isLocked ? '#92400e' : '#15803d',
+                                          border: `1px solid ${item.isLocked ? '#fde68a' : '#bbf7d0'}`,
+                                          borderRadius: '4px',
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        {item.isLocked ? '🔒' : '🔓'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteMenuItem(menu.id, item.id)}
+                                        style={{ padding: '3px 6px', fontSize: '0.7rem', backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer' }}
+                                      >
+                                        🗑️
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               ))}

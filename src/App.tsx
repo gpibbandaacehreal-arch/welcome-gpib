@@ -1164,34 +1164,69 @@ function App() {
           </p>
           {activeCustomMenu.items.length > 0 ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '20px' }}>
-              {activeCustomMenu.items.map(item => (
-                <a
-                  key={item.id}
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onDoubleClick={() => { window.open(item.url, '_blank'); }}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '24px 16px',
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    textDecoration: 'none',
-                    color: '#1e293b',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.12)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-                >
-                  <span style={{ fontSize: '3rem', marginBottom: '10px', lineHeight: 1 }}>📂</span>
-                  <span style={{ fontWeight: '600', fontSize: '0.95rem', textAlign: 'center' }}>{item.name}</span>
-                </a>
-              ))}
+              {activeCustomMenu.items.map(item => {
+                const isItemLocked = item.isLocked === true;
+                const isAdminUser = isLoggedIn;
+                const locked = isItemLocked && !isAdminUser;
+
+                if (locked) {
+                  // Locked folder: non-admin user sees locked message on click
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => alert('🔒 Folder ini dikunci oleh admin. Hubungi admin untuk membuka folder.')}
+                      onDoubleClick={() => alert('🔒 Folder ini dikunci oleh admin. Hubungi admin untuk membuka folder.')}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        padding: '24px 16px',
+                        backgroundColor: '#fffbeb',
+                        border: '1px dashed #f59e0b',
+                        borderRadius: '12px',
+                        color: '#92400e',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                        cursor: 'not-allowed',
+                        opacity: 0.8
+                      }}
+                    >
+                      <span style={{ fontSize: '3rem', marginBottom: '10px', lineHeight: 1 }}>🔒</span>
+                      <span style={{ fontWeight: '600', fontSize: '0.95rem', textAlign: 'center' }}>{item.name}</span>
+                      <span style={{ fontSize: '0.75rem', marginTop: '6px', color: '#b45309', textAlign: 'center' }}>Dikunci oleh admin</span>
+                    </div>
+                  );
+                }
+
+                // Unlocked folder (or admin user): normal behavior
+                return (
+                  <a
+                    key={item.id}
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onDoubleClick={() => { window.open(item.url, '_blank'); }}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '24px 16px',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      textDecoration: 'none',
+                      color: '#1e293b',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.12)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                  >
+                    <span style={{ fontSize: '3rem', marginBottom: '10px', lineHeight: 1 }}>{isItemLocked ? '🔒' : '📂'}</span>
+                    <span style={{ fontWeight: '600', fontSize: '0.95rem', textAlign: 'center' }}>{item.name}</span>
+                  </a>
+                );
+              })}
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
