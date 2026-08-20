@@ -63,7 +63,13 @@ Form baru dengan 3 langkah yang lebih sederhana:
 - Judul halaman: `Download & Lacak Proposal` → `PROPOSAL — Lacak & Kelola`
 - File: `src/App.tsx` (navbar label), `src/components/DownloadProposal.tsx` (page title)
 
-#### 6. Bug Fix: Deploy Vercel Gagal karena TS6133
+#### 6. Edit Posisi Menu di Daftar Menu Aktif
+- Posisi menu sekarang bisa diubah langsung dari tabel Daftar Menu Aktif
+- Dropdown editabel dengan 5 pilihan posisi: Beranda / Jadwal Ibadah / Organisasi Gereja / Data Umat / Login
+- Perubahan posisi langsung diterapkan tanpa perlu hapus & tambah ulang
+- File: `src/components/APanel.tsx`
+
+#### 7. Bug Fix: Deploy Vercel Gagal karena TS6133
 - **Masalah**: 3 deploy Vercel berturut-turut gagal (status Error)
 - **Penyebab**: Parameter `e` di `onDoubleClick={(e) => ...}` tidak terpakai, `tsc -b` mem-block build karena `noUnusedParameters: true`
 - **Solusi**: Hapus parameter `e` → `onDoubleClick={() => ...}`
@@ -73,6 +79,7 @@ Form baru dengan 3 langkah yang lebih sederhana:
 
 | Commit | Deskripsi |
 |--------|-----------|
+| `1e37f87` | feat: tambah edit posisi menu di Daftar Menu Aktif (dropdown editabel) |
 | `30dbe2f` | rename: ganti nama menu 'Download' menjadi 'PROPOSAL' di navbar |
 | `096d4a2` | fix: hapus unused parameter 'e' di onDoubleClick agar tsc -b passing |
 | `d547f3b` | refactor: sembunyikan tab Kelola Menu, simplifikasi form Tambah Menu Baru |
@@ -80,12 +87,12 @@ Form baru dengan 3 langkah yang lebih sederhana:
 | Aksi | Status |
 |------|--------|
 | Deploy ke Vercel Production | ✅ Live di https://welcome-gpib.vercel.app/ |
-| Git Push | ✅ 3 commits pushed ke origin/main |
+| Git Push | ✅ 4 commits pushed ke origin/main |
 
 ### 📋 Fitur yang Tersedia di A.Panel (Sekarang)
 
 1. **Tab 🖼️ Header & Gambar Banner** — Kustomisasi judul, logo, font, background header
-2. **Tab 🧭 Menu Navigasi & Font** — Atur font/warna navbar + **Tambah Menu Baru** (Nama, Posisi, Isi folder)
+2. **Tab 🧭 Menu Navigasi & Font** — Atur font/warna navbar + **Tambah Menu Baru** (Nama, Posisi, Isi folder) + **Edit Posisi** di Daftar Menu Aktif
 3. **Tab 🎨 Warna & Tema** — Skema warna utama & background situs
 
 ### 📋 Navbar Sekarang (Tampilan User)
