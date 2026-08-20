@@ -150,7 +150,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
 
   return (
     <div className="page-card">
-      <h2>Download & Lacak Proposal</h2>
+      <h2>PROPOSAL — Lacak & Kelola</h2>
       
       {isLoggedIn && (
         <div className="admin-data-form" style={{ marginBottom: '30px' }}>

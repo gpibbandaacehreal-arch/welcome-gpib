@@ -1485,7 +1485,7 @@ function App() {
             className={activeTab === 'Download' ? 'active' : ''}
             onClick={() => { setActiveTab('Download'); setIsMobileMenuOpen(false); navigate('/'); }}
           >
-            Download
+            PROPOSAL
           </li>
 
           {isLoggedIn ? (
