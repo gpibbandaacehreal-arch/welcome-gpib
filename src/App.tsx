@@ -1170,7 +1170,7 @@ function App() {
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onDoubleClick={(e) => { window.open(item.url, '_blank'); }}
+                  onDoubleClick={() => { window.open(item.url, '_blank'); }}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
