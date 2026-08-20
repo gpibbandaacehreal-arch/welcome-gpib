@@ -183,6 +183,11 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
     setCustomMenus(prev => prev.map(m => m.id === id ? { ...m, isActive: !m.isActive } : m));
   };
 
+  // Update menu position
+  const handleUpdateMenuPosition = (id: string, newPosition: string) => {
+    setCustomMenus(prev => prev.map(m => m.id === id ? { ...m, position: newPosition } : m));
+  };
+
   // Update a folder item URL inside a custom menu
   const handleUpdateMenuItem = (menuId: string, itemId: string, newUrl: string) => {
     setCustomMenus(prev => prev.map(m => {
@@ -666,15 +671,20 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
             {customMenus.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '12px' }}>
                 {customMenus.map(menu => {
-                  const posLabel = MENU_POSITIONS.find(p => p.value === menu.position)?.label || menu.position;
                   return (
                     <div key={menu.id} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px', backgroundColor: '#f8fafc' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
                         <div>
                           <span style={{ fontWeight: '700', fontSize: '1rem', color: '#0f172a' }}>📂 {menu.name}</span>
-                          <span style={{ fontSize: '0.8rem', color: '#64748b', marginLeft: '10px' }}>
-                            Posisi: <strong>{posLabel}</strong>
-                          </span>
+                          <select
+                            value={menu.position}
+                            onChange={(e) => handleUpdateMenuPosition(menu.id, e.target.value)}
+                            style={{ marginLeft: '10px', padding: '3px 8px', fontSize: '0.78rem', borderRadius: '4px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#334155', fontWeight: '500', cursor: 'pointer' }}
+                          >
+                            {MENU_POSITIONS.map(pos => (
+                              <option key={pos.value} value={pos.value}>{pos.label}</option>
+                            ))}
+                          </select>
                           <button
                             type="button"
                             onClick={() => handleToggleCustomMenu(menu.id)}
