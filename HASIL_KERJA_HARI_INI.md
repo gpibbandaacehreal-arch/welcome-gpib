@@ -58,22 +58,46 @@ Form baru dengan 3 langkah yang lebih sederhana:
 | `src/App.tsx` | Hapus `isBuiltinMenuHidden()` / `getBuiltinMenuLabel()`, navbar berbasis position, render halaman folder icon |
 | `HASIL_KERJA_HARI_INI.md` | Update catatan hari ini |
 
+#### 5. Rename Menu "Download" → "PROPOSAL"
+- Teks navbar: `Download` → `PROPOSAL`
+- Judul halaman: `Download & Lacak Proposal` → `PROPOSAL — Lacak & Kelola`
+- File: `src/App.tsx` (navbar label), `src/components/DownloadProposal.tsx` (page title)
+
+#### 6. Bug Fix: Deploy Vercel Gagal karena TS6133
+- **Masalah**: 3 deploy Vercel berturut-turut gagal (status Error)
+- **Penyebab**: Parameter `e` di `onDoubleClick={(e) => ...}` tidak terpakai, `tsc -b` mem-block build karena `noUnusedParameters: true`
+- **Solusi**: Hapus parameter `e` → `onDoubleClick={() => ...}`
+- **Commit**: `096d4a2`
+
 ### 🚀 Deploy & Commit
 
 | Commit | Deskripsi |
 |--------|-----------|
-| `d547f3b` | refactor: sembunyikan tab Kelola Menu, simplifikasi form Tambah Menu Baru dengan posisi & isi folder links |
+| `30dbe2f` | rename: ganti nama menu 'Download' menjadi 'PROPOSAL' di navbar |
+| `096d4a2` | fix: hapus unused parameter 'e' di onDoubleClick agar tsc -b passing |
+| `d547f3b` | refactor: sembunyikan tab Kelola Menu, simplifikasi form Tambah Menu Baru |
 
 | Aksi | Status |
 |------|--------|
 | Deploy ke Vercel Production | ✅ Live di https://welcome-gpib.vercel.app/ |
-| Git Push | ✅ `origin/main` |
+| Git Push | ✅ 3 commits pushed ke origin/main |
 
 ### 📋 Fitur yang Tersedia di A.Panel (Sekarang)
 
 1. **Tab 🖼️ Header & Gambar Banner** — Kustomisasi judul, logo, font, background header
 2. **Tab 🧭 Menu Navigasi & Font** — Atur font/warna navbar + **Tambah Menu Baru** (Nama, Posisi, Isi folder)
 3. **Tab 🎨 Warna & Tema** — Skema warna utama & background situs
+
+### 📋 Navbar Sekarang (Tampilan User)
+
+| Menu | Keterangan |
+|------|------------|
+| Beranda | Menu utama |
+| (📂 Menu Kustom) | Muncul jika admin tambah menu baru |
+| Jadwal Ibadah | Menu utama |
+| Organisasi Gereja ▾ | Dropdown PELKAT & KOMISI |
+| Data Umat | Menu utama |
+| **PROPOSAL** | Sebelumnya "Download" — sudah di-rename ✅ |
 
 ### 📋 Contoh Penggunaan
 
@@ -109,6 +133,8 @@ Form baru dengan 3 langkah yang lebih sederhana:
 ### Commit Sebelumnya:
 | Commit | Deskripsi |
 |--------|-----------|
+| `5553c89` | chore: force redeploy untuk pastikan perubahan ter-deploy |
+| `cf544f0` | docs: update HASIL_KERJA_HARI_INI.md |
 | `fe2bd79` | fix: perbaiki menu override sembunyi + tambah form 'Tambah Menu Baru' |
 | `77e7e1e` | feat: tambahkan panel kelola menu (rename, sembunyikan, folder links) |
 | `3285275` | feat: tambahkan sub menu PKLU + optimasi performa |
