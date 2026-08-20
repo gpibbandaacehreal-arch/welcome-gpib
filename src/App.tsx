@@ -14,14 +14,14 @@ import { supabase, type SupabaseProposal } from './services/supabase'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import { normalizeSubMenuKey } from './utils/menuUtils'
-import { siteSettingsService, type SiteSettings, type MenuOverride, type FolderLinkItem } from './services/siteSettings'
+import { siteSettingsService, type SiteSettings } from './services/siteSettings'
 import { getErrorMessage } from './utils/errorUtils'
 import type { EditorSaveData } from './components/AdminDashboard'
 import { fetchFromGoogleScript, postToGoogleScript } from './services/googleScript'
 
 
 // Types
-type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Organisasi Gereja' | 'Data Umat' | 'Download' | 'FolderLinks' | 'Login' 
+type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Organisasi Gereja' | 'Data Umat' | 'Download' | 'Login' 
   | 'PA' | 'PT' | 'GP' | 'PKB' | 'PKP' | 'PKLU' 
   | 'GermasaLH' | 'PG' | 'Inforkom-Litbang' | 'APanel' | (string & {});
 
@@ -1154,22 +1154,23 @@ function App() {
       )
     }
 
-    if (activeTab === 'FolderLinks') {
-      const activeFolderLinks = folderLinks;
+    // Custom menu page: render folder icons for the active custom menu
+    if (activeCustomMenu) {
       return (
         <div className="page-card">
-          <h2>📁 Download</h2>
+          <h2>📂 {activeCustomMenu.name}</h2>
           <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '25px' }}>
-            Klik pada folder di bawah ini untuk mengakses file di Google Drive atau layanan drive lainnya.
+            Klik dua kali pada folder di bawah ini untuk mengakses file di Google Drive atau layanan drive lainnya.
           </p>
-          {activeFolderLinks.length > 0 ? (
+          {activeCustomMenu.items.length > 0 ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '20px' }}>
-              {activeFolderLinks.map(folder => (
+              {activeCustomMenu.items.map(item => (
                 <a
-                  key={folder.id}
-                  href={folder.url}
+                  key={item.id}
+                  href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onDoubleClick={(e) => { window.open(item.url, '_blank'); }}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -1188,13 +1189,13 @@ function App() {
                   onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; }}
                 >
                   <span style={{ fontSize: '3rem', marginBottom: '10px', lineHeight: 1 }}>📂</span>
-                  <span style={{ fontWeight: '600', fontSize: '0.95rem', textAlign: 'center' }}>{folder.name}</span>
+                  <span style={{ fontWeight: '600', fontSize: '0.95rem', textAlign: 'center' }}>{item.name}</span>
                 </a>
               ))}
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-              <p style={{ fontSize: '2rem', marginBottom: '10px' }}>📁</p>
+              <p style={{ fontSize: '2rem', marginBottom: '10px' }}>📂</p>
               <p>Belum ada folder tersedia.</p>
             </div>
           )}
@@ -1320,38 +1321,12 @@ function App() {
     )
   }
 
-  const isKelolaAdmin = (name: string) => {
-    const lower = name.toLowerCase().replace(/\s+/g, '');
-    return lower.includes('kelolaadmin');
-  };
+  // Custom menus with position-based navbar rendering
+  const customMenus = siteContent.settings.customMenus?.filter(m => m.isActive !== false) || [];
+  const getMenusAtPosition = (pos: string) => customMenus.filter(m => m.position === pos);
 
-  const customUtamaMenus = siteContent.settings.customMenus?.filter(m => m.category === 'UTAMA' && m.isActive !== false && !isKelolaAdmin(m.name)) || [];
-  const customPelkatMenus = siteContent.settings.customMenus?.filter(m => m.category === 'PELKAT' && m.isActive !== false && !isKelolaAdmin(m.name)) || [];
-  const customKomisiMenus = siteContent.settings.customMenus?.filter(m => m.category === 'KOMISI' && m.isActive !== false && !isKelolaAdmin(m.name)) || [];
-
-  // Menu override helpers: rename / hide / close built-in menus
-  const menuOverrides: MenuOverride[] = siteContent.settings.menuOverrides || [];
-  const folderLinks: FolderLinkItem[] = (siteContent.settings.folderLinks || []).filter(f => f.isActive !== false);
-
-  /** Check if a built-in menu key should be hidden (for non-logged-in users) */
-  const isBuiltinMenuHidden = (builtinKey: string): boolean => {
-    const ov = menuOverrides.find(o => o.builtinKey === builtinKey);
-    if (!ov) return false;
-    // explicit hide
-    if (ov.hidden && !isLoggedIn) return true;
-    // date-based close
-    if (ov.hideAfterDate) {
-      const closeDate = new Date(ov.hideAfterDate);
-      if (new Date() >= closeDate) return true;
-    }
-    return false;
-  };
-
-  /** Get display name for a built-in menu (renamed or original) */
-  const getBuiltinMenuLabel = (builtinKey: string, fallback: string): string => {
-    const ov = menuOverrides.find(o => o.builtinKey === builtinKey);
-    return ov?.displayName?.trim() || fallback;
-  };
+  /** Find which custom menu matches the activeTab by name */
+  const activeCustomMenu = customMenus.find(m => m.name === activeTab);
 
 
   const headerBgImage = siteContent.settings.headerBgImage;
@@ -1429,27 +1404,37 @@ function App() {
           {isMobileMenuOpen ? '✕' : '☰'} Menu
         </div>
         <ul className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-          {!isBuiltinMenuHidden('Beranda') && (
-            <li 
-              className={activeTab === 'Beranda' ? 'active' : ''}
-              onClick={() => { setActiveTab(getBuiltinMenuLabel('Beranda', 'Beranda')); setIsMobileMenuOpen(false); navigate('/'); }}
-            >
-              {getBuiltinMenuLabel('Beranda', 'Beranda')}
+          <li 
+            className={activeTab === 'Beranda' ? 'active' : ''}
+            onClick={() => { setActiveTab('Beranda'); setIsMobileMenuOpen(false); navigate('/'); }}
+          >
+            Beranda
+          </li>
+
+          {getMenusAtPosition('after-Beranda').map(m => (
+            <li key={m.id} className={activeTab === m.name ? 'active' : ''}
+              onClick={() => { setActiveTab(m.name); setIsMobileMenuOpen(false); navigate('/'); }}>
+              📂 {m.name}
             </li>
-          )}
-          {!isBuiltinMenuHidden('Jadwal Ibadah') && (
-            <li 
-              className={activeTab === 'Jadwal Ibadah' ? 'active' : ''}
-              onClick={() => { setActiveTab('Jadwal Ibadah'); setIsMobileMenuOpen(false); navigate('/'); }}
-            >
-              {getBuiltinMenuLabel('Jadwal Ibadah', 'Jadwal Ibadah')}
+          ))}
+
+          <li 
+            className={activeTab === 'Jadwal Ibadah' ? 'active' : ''}
+            onClick={() => { setActiveTab('Jadwal Ibadah'); setIsMobileMenuOpen(false); navigate('/'); }}
+          >
+            Jadwal Ibadah
+          </li>
+
+          {getMenusAtPosition('after-Jadwal Ibadah').map(m => (
+            <li key={m.id} className={activeTab === m.name ? 'active' : ''}
+              onClick={() => { setActiveTab(m.name); setIsMobileMenuOpen(false); navigate('/'); }}>
+              📂 {m.name}
             </li>
-          )}
-          
-          {!isBuiltinMenuHidden('Organisasi Gereja') && (
-          <li className={`dropdown ${['Organisasi Gereja', 'PA', 'PT', 'GP', 'PKB', 'PKP', 'PKLU', 'GermasaLH', 'PG', 'Inforkom-Litbang', ...customPelkatMenus.map(m => m.name), ...customKomisiMenus.map(m => m.name)].includes(activeTab) ? 'active' : ''} ${isDropdownOpen ? 'dropdown-open' : ''}`}>
+          ))}
+
+          <li className={`dropdown ${['Organisasi Gereja', 'PA', 'PT', 'GP', 'PKB', 'PKP', 'PKLU', 'GermasaLH', 'PG', 'Inforkom-Litbang'].includes(activeTab) ? 'active' : ''} ${isDropdownOpen ? 'dropdown-open' : ''}`}>
             <span onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-              {getBuiltinMenuLabel('Organisasi Gereja', 'Organisasi Gereja')} {isDropdownOpen ? '▴' : '▾'}
+              Organisasi Gereja {isDropdownOpen ? '▴' : '▾'}
             </span>
             <ul className="dropdown-menu">
               <li onClick={() => { setActiveTab('Organisasi Gereja'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Struktur Organisasi</li>
@@ -1462,9 +1447,6 @@ function App() {
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKB'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Bapak (PKB)</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Perempuan (PKP)</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKLU'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Lanjut Usia (PKLU)</li>
-                  {customPelkatMenus.map(m => (
-                    <li key={m.id} onClick={(e) => { e.stopPropagation(); setActiveTab(m.name); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>{m.name}</li>
-                  ))}
                 </ul>
               </li>
               <li className="dropdown-submenu">
@@ -1473,33 +1455,38 @@ function App() {
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('GermasaLH'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>GermasaLH</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PG'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Komisi PG</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('Inforkom-Litbang'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Inforkom-Litbang</li>
-                  {customKomisiMenus.map(m => (
-                    <li key={m.id} onClick={(e) => { e.stopPropagation(); setActiveTab(m.name); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>{m.name}</li>
-                  ))}
                 </ul>
               </li>
             </ul>
           </li>
-          )}
 
-          {customUtamaMenus.map(m => (
-            <li 
-              key={m.id}
-              className={activeTab === m.name ? 'active' : ''}
-              onClick={() => { setActiveTab(m.name); setIsMobileMenuOpen(false); navigate('/'); }}
-            >
-              {m.name}
+          {getMenusAtPosition('after-Organisasi Gereja').map(m => (
+            <li key={m.id} className={activeTab === m.name ? 'active' : ''}
+              onClick={() => { setActiveTab(m.name); setIsMobileMenuOpen(false); navigate('/'); }}>
+              📂 {m.name}
             </li>
           ))}
 
-          {!isBuiltinMenuHidden('Data Umat') && (
-            <li 
-              className={activeTab === 'Data Umat' ? 'active' : ''}
-              onClick={() => { setActiveTab('Data Umat'); setIsMobileMenuOpen(false); navigate('/'); }}
-            >
-              {getBuiltinMenuLabel('Data Umat', 'Data Umat')}
+          <li 
+            className={activeTab === 'Data Umat' ? 'active' : ''}
+            onClick={() => { setActiveTab('Data Umat'); setIsMobileMenuOpen(false); navigate('/'); }}
+          >
+            Data Umat
+          </li>
+
+          {getMenusAtPosition('after-Data Umat').map(m => (
+            <li key={m.id} className={activeTab === m.name ? 'active' : ''}
+              onClick={() => { setActiveTab(m.name); setIsMobileMenuOpen(false); navigate('/'); }}>
+              📂 {m.name}
             </li>
-          )}
+          ))}
+
+          <li 
+            className={activeTab === 'Download' ? 'active' : ''}
+            onClick={() => { setActiveTab('Download'); setIsMobileMenuOpen(false); navigate('/'); }}
+          >
+            Download
+          </li>
 
           {isLoggedIn ? (
             <>
@@ -1526,25 +1513,12 @@ function App() {
             </li>
           )}
 
-          {/* Download/Proposal menu — respect overrides (rename, hide, close) */}
-          {!isBuiltinMenuHidden('Download') && (
-            <li 
-              className={activeTab === 'Download' ? 'active' : ''}
-              onClick={() => { setActiveTab('Download'); setIsMobileMenuOpen(false); navigate('/'); }}
-            >
-              {getBuiltinMenuLabel('Download', 'Download')}
+          {getMenusAtPosition('after-Login').map(m => (
+            <li key={m.id} className={activeTab === m.name ? 'active' : ''}
+              onClick={() => { setActiveTab(m.name); setIsMobileMenuOpen(false); navigate('/'); }}>
+              📂 {m.name}
             </li>
-          )}
-
-          {/* Folder Links menu — only shown if there are active folder links AND not hidden by override */}
-          {folderLinks.length > 0 && !isBuiltinMenuHidden('FolderLinks') && (
-            <li 
-              className={activeTab === 'FolderLinks' ? 'active' : ''}
-              onClick={() => { setActiveTab('FolderLinks'); setIsMobileMenuOpen(false); navigate('/'); }}
-            >
-              📁 {getBuiltinMenuLabel('FolderLinks', 'Download')}
-            </li>
-          )}
+          ))}
         </ul>
       </nav>
 
