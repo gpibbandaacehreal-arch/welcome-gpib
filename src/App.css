@@ -543,11 +543,7 @@ button {
   background: white;
 }
 
-.sidebar-container {
-  width: 320px;
-  border-left: 1px solid #ddd;
-  background: #f8f9fa;
-}
+
 
 /* RESPONSIVE DESIGN CONSOLIDATED */
 @media (max-width: 1200px) {
@@ -666,16 +662,6 @@ button {
   }
 
   /* Admin Dashboard Mobile */
-  .dashboard-layout {
-    flex-direction: column;
-  }
-  
-  .sidebar-container {
-    width: 100%;
-    border-left: none;
-    border-top: 1px solid #ddd;
-  }
-
   .editor-container {
     padding: 20px;
   }

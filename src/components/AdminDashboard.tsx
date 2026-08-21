@@ -1,75 +1,54 @@
 import React, { useState } from 'react';
 import HeaderAksi from './HeaderAksi';
 import EditorUtama from './EditorUtama';
-import SidebarSetelan from './SidebarSetelan';
 
 /**
  * Data editor yang dikirim dari AdminDashboard ke App (onSave / onPublish).
+ * Sidebar settings (siteTitle, siteLogo, berandaPdf, label, jadwal, tautan, komentar)
+ * sudah dipindahkan ke A.Panel.
  */
 export interface EditorSaveData {
   title: string;
   content: string;
-  label: string;
-  jadwal: string;
-  tautan: string;
-  komentar: boolean;
-  siteTitle: string;
-  siteLogo: string;
-  berandaPdf: string;
 }
 
 interface AdminDashboardProps {
   initialTitle: string;
   initialContent: string;
-  initialSiteTitle: string;
-  initialSiteLogo: string;
-  initialBerandaPdf: string;
+  initialBerandaPdf?: string;
   onSave: (data: EditorSaveData) => void;
   onPublish: (data: EditorSaveData) => void;
   isSaving: boolean;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
-  initialTitle, initialContent, 
-  initialSiteTitle, initialSiteLogo, initialBerandaPdf,
+  initialTitle, initialContent,
+  initialBerandaPdf,
   onSave, onPublish, isSaving
 }) => {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
-  const [siteTitle, setSiteTitle] = useState(initialSiteTitle);
-  const [siteLogo, setSiteLogo] = useState(initialSiteLogo);
-  const [berandaPdf, setBerandaPdf] = useState(initialBerandaPdf);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  
-  // Sidebar states
-  const [label, setLabel] = useState('');
-  const [jadwal, setJadwal] = useState('');
-  const [tautan, setTautan] = useState('');
-  const [komentar, setKomentar] = useState(true);
 
   // Sinkronkan state editor ketika props awal berubah (ganti tab) —
   // pakai pola "adjust state during render" agar tidak memicu cascading render.
   const [lastInitialKey, setLastInitialKey] = useState('');
-  const initialKey = [initialTitle, initialContent, initialSiteTitle, initialSiteLogo, initialBerandaPdf].join('|');
+  const initialKey = `${initialTitle}|${initialContent}`;
   if (initialKey !== lastInitialKey) {
     setLastInitialKey(initialKey);
     setTitle(initialTitle);
     setContent(initialContent);
-    setSiteTitle(initialSiteTitle);
-    setSiteLogo(initialSiteLogo);
-    setBerandaPdf(initialBerandaPdf);
   }
 
   const handlePublish = () => {
-    onPublish({ title, content, label, jadwal, tautan, komentar, siteTitle, siteLogo, berandaPdf });
+    onPublish({ title, content });
   };
 
   const handlePreview = () => {
-    onSave({ title, content, label, jadwal, tautan, komentar, siteTitle, siteLogo, berandaPdf });
+    onSave({ title, content });
   };
 
   return (
-    <div className={`admin-dashboard ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+    <div className="admin-dashboard">
       <div className="dashboard-layout">
         <div className="editor-container">
           <EditorUtama 
@@ -77,25 +56,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             setTitle={setTitle} 
             content={content} 
             setContent={setContent} 
-            berandaPdf={berandaPdf}
+            berandaPdf={initialBerandaPdf}
           />
-        </div>
-        
-        <div className="sidebar-container">
-          <div className="sidebar-toggle-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-            {isSidebarOpen ? '▶' : '◀'} Setelan
-          </div>
-          <div className={`sidebar-wrapper ${isSidebarOpen ? 'open' : 'closed'}`}>
-            <SidebarSetelan 
-              label={label} setLabel={setLabel}
-              jadwal={jadwal} setJadwal={setJadwal}
-              tautan={tautan} setTautan={setTautan}
-              komentar={komentar} setKomentar={setKomentar}
-              siteTitle={siteTitle} setSiteTitle={setSiteTitle}
-              siteLogo={siteLogo} setSiteLogo={setSiteLogo}
-              berandaPdf={berandaPdf} setBerandaPdf={setBerandaPdf}
-            />
-          </div>
         </div>
       </div>
 

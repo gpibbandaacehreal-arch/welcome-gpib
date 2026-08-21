@@ -465,13 +465,10 @@ function App() {
     const pageKey = normalizeSubMenuKey(activeTab) || activeTab;
     const finalTitle = updatedData?.title !== undefined ? updatedData.title : editTitle
     const finalContent = updatedData?.content !== undefined ? updatedData.content : editContent
-    const finalSiteTitle = updatedData?.siteTitle !== undefined ? updatedData.siteTitle : editSiteTitle
-    const finalLogo = updatedData?.siteLogo !== undefined ? updatedData.siteLogo : editLogo
-    const finalBerandaPdf = updatedData?.berandaPdf !== undefined ? updatedData.berandaPdf : editBerandaPdf
     
     const newContent = {
       ...siteContent,
-      settings: { logo: finalLogo, title: finalSiteTitle, berandaPdf: finalBerandaPdf },
+      settings: { ...siteContent.settings, title: editSiteTitle, logo: editLogo, berandaPdf: editBerandaPdf },
       pages: {
         ...siteContent.pages,
         [pageKey]: { title: finalTitle, content: finalContent }
@@ -1290,15 +1287,10 @@ function App() {
             <AdminDashboard 
               initialTitle={editTitle || ''}
               initialContent={editContent || ''}
-              initialSiteTitle={editSiteTitle || ''}
-              initialSiteLogo={editLogo || ''}
               initialBerandaPdf={editBerandaPdf || ''}
               onSave={(data: EditorSaveData) => {
                 setEditTitle(data.title || '');
                 setEditContent(data.content || '');
-                setEditSiteTitle(data.siteTitle || '');
-                setEditLogo(data.siteLogo || '');
-                setEditBerandaPdf(data.berandaPdf || '');
               }}
               onPublish={(data: EditorSaveData) => saveChanges(data)}
               isSaving={isSaving}
@@ -1322,15 +1314,10 @@ function App() {
           <AdminDashboard 
             initialTitle={editTitle || ''}
             initialContent={editContent || ''}
-            initialSiteTitle={editSiteTitle || ''}
-            initialSiteLogo={editLogo || ''}
             initialBerandaPdf={editBerandaPdf || ''}
             onSave={(data: EditorSaveData) => {
               setEditTitle(data.title || '');
               setEditContent(data.content || '');
-              setEditSiteTitle(data.siteTitle || '');
-              setEditLogo(data.siteLogo || '');
-              setEditBerandaPdf(data.berandaPdf || '');
             }}
             onPublish={(data: EditorSaveData) => saveChanges(data)}
             isSaving={isSaving}
