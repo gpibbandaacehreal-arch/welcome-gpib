@@ -346,6 +346,54 @@ h1, h2, h3 {
   margin: 20px 0;
 }
 
+/* Quill align classes untuk halaman publik (content-body) */
+.content-body .ql-align-center,
+.content-body p.ql-align-center,
+.content-body div.ql-align-center {
+  text-align: center;
+}
+
+.content-body .ql-align-right,
+.content-body p.ql-align-right,
+.content-body div.ql-align-right {
+  text-align: right;
+}
+
+.content-body .ql-align-justify,
+.content-body p.ql-align-justify,
+.content-body div.ql-align-justify {
+  text-align: justify;
+}
+
+/* Quill align untuk editor juga */
+.editor-utama .ql-align-center {
+  text-align: center;
+}
+.editor-utama .ql-align-right {
+  text-align: right;
+}
+.editor-utama .ql-align-justify {
+  text-align: justify;
+}
+
+/* Gambar di content-body juga respond terhadap align */
+.content-body img.ql-align-center,
+.content-body div.ql-align-center > img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+.content-body img.ql-align-right,
+.content-body div.ql-align-right > img {
+  display: block;
+  margin-left: auto;
+}
+.content-body img.ql-align-left,
+.content-body div.ql-align-left > img {
+  display: block;
+  margin-right: auto;
+}
+
 /* Login Container */
 .login-container {
   max-width: 450px;
