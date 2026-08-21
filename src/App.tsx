@@ -80,8 +80,8 @@ const DEFAULT_CONTENT: FullContent = {
       content: '<p><strong>Tugas Pokok:</strong><br>Melaksanakan pelayanan kategorial kepada anak-anak jemaat dalam rentang usia sekolah minggu (0-12 tahun).</p><p><strong>Fungsi:</strong><br>1. Menyelenggarakan Ibadah Hari Minggu Pelayanan Anak (IHMPA).<br>2. Membina iman anak melalui pengajaran Alkitab yang kreatif dan kontekstual.<br>3. Mengembangkan potensi dan bakat anak dalam lingkungan gerejawi.</p>'
     },
     'PT': {
-      title: 'Pelayanan Taruna (PT)',
-      content: '<p><strong>Tugas Pokok:</strong><br>Melayani dan membina kaum taruna atau remaja jemaat (usia 13-17 tahun).</p><p><strong>Fungsi:</strong><br>1. Menyelenggarakan Ibadah Hari Minggu Pelayanan Taruna (IHMPT).<br>2. Mendampingi remaja dalam masa transisi mencari jati diri dengan nilai-nilai Kristiani.<br>3. Membangun persekutuan yang akrab di antara taruna.</p>'
+      title: 'Pelayanan Teruna (PT)',
+      content: '<p><strong>Tugas Pokok:</strong><br>Melayani dan membina kaum teruna atau remaja jemaat (usia 13-17 tahun).</p><p><strong>Fungsi:</strong><br>1. Menyelenggarakan Ibadah Hari Minggu Pelayanan Teruna (IHMPT).<br>2. Mendampingi remaja dalam masa transisi mencari jati diri dengan nilai-nilai Kristiani.<br>3. Membangun persekutuan yang akrab di antara teruna.</p>'
     },
     'GP': {
       title: 'Gerakan Pemuda (GP)',
@@ -371,7 +371,7 @@ function App() {
 
     const pageData = siteContent.pages?.[editorPageKey] || siteContent.pages?.[activeTab] || {
       title: editorPageKey === 'PA' ? 'Pelayanan Anak (PA)' :
-             editorPageKey === 'PT' ? 'Pelayanan Taruna (PT)' :
+             editorPageKey === 'PT' ? 'Pelayanan Teruna (PT)' :
              editorPageKey === 'GP' ? 'Gerakan Pemuda (GP)' :
              editorPageKey === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
              editorPageKey === 'PKP' ? 'Persekutuan Kaum Perempuan (PKP)' :
@@ -1238,7 +1238,7 @@ function App() {
     const pageKey = normalizeSubMenuKey(activeTab) || activeTab;
     const currentPage = siteContent.pages[pageKey] || siteContent.pages[activeTab] || {
       title: pageKey === 'PA' ? 'Pelayanan Anak (PA)' :
-             pageKey === 'PT' ? 'Pelayanan Taruna (PT)' :
+             pageKey === 'PT' ? 'Pelayanan Teruna (PT)' :
              pageKey === 'GP' ? 'Gerakan Pemuda (GP)' :
              pageKey === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
              pageKey === 'PKP' ? 'Persekutuan Kaum Perempuan (PKP)' :
@@ -1464,7 +1464,7 @@ function App() {
                 <span>PELKAT ▸</span>
                 <ul className="submenu-list">
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PA'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Pelayanan Anak (PA)</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PT'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Pelayanan Taruna (PT)</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PT'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Pelayanan Teruna (PT)</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('GP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Gerakan Pemuda (GP)</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKB'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Bapak (PKB)</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('PKP'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Persekutuan Kaum Perempuan (PKP)</li>

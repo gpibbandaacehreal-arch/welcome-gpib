@@ -49,7 +49,7 @@ export function normalizeSubMenuKey(val: SubMenuKeyInput): string {
   const lower = rawStr.toLowerCase();
 
   if (/\bpa\b/i.test(lower) || lower.includes('pelayanan anak')) return 'PA';
-  if (/\bpt\b/i.test(lower) || lower.includes('pelayanan taruna')) return 'PT';
+  if (/\bpt\b/i.test(lower) || lower.includes('pelayanan teruna')) return 'PT';
   if (/\bgp\b/i.test(lower) || lower.includes('gerakan pemuda')) return 'GP';
   if (/\bpkb\b/i.test(lower) || lower.includes('kaum bapak')) return 'PKB';
   if (/\bpkp\b/i.test(lower) || lower.includes('kaum perempuan')) return 'PKP';
