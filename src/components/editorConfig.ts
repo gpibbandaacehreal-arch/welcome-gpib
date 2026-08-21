@@ -13,6 +13,7 @@ export const modules = {
 export const formats = [
   "header",
   "bold", "italic", "underline", "strike",
+  "align",
   "list",
   "link", "image",
 ];

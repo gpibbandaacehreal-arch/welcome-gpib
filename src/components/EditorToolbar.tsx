@@ -23,6 +23,12 @@ const EditorToolbar: React.FC = () => (
       <button className="ql-image" />
     </span>
     <span className="ql-formats">
+      <button className="ql-align" value="" />
+      <button className="ql-align" value="center" />
+      <button className="ql-align" value="right" />
+      <button className="ql-align" value="justify" />
+    </span>
+    <span className="ql-formats">
       <button className="ql-clean" />
     </span>
   </div>

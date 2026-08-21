@@ -38,9 +38,11 @@ const EditorUtama: React.FC<EditorUtamaProps> = ({ title, setTitle, content, set
 
             const quill = quillRef.current?.getEditor();
             if (quill) {
-              const range = quill.getSelection();
+              const range = quill.getSelection(true);
               if (range) {
                 quill.insertEmbed(range.index, 'image', publicUrl);
+                // Posisikan gambar di tengah secara default
+                quill.formatLine(range.index + 1, 1, 'align', 'center');
               }
             }
           } catch (uploadError) {
