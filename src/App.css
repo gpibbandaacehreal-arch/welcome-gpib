@@ -611,28 +611,65 @@ button {
 }
 
 @media (max-width: 768px) {
-  /* Header & Body */
-  .header { padding: 60px 15px; }
-  .logo-container { padding: 8px; margin-bottom: 20px; }
-  .logo-container img { width: 90px; height: 90px; }
-  .header h1 { font-size: 1.8rem; letter-spacing: 1px; }
+  /* ═══════════════════════════════════════════
+     MOBILE — User Non-Login Eye-Catching
+     ═══════════════════════════════════════════ */
+
+  /* Header — Logo & Judul */
+  .header { 
+    padding: 40px 15px 30px; 
+    background: linear-gradient(135deg, #ffffff 0%, #fdfaf5 100%);
+  }
+  .logo-container { 
+    padding: 6px; 
+    margin-bottom: 18px; 
+    box-shadow: 0 4px 20px rgba(139, 0, 0, 0.12);
+  }
+  .logo-container img { width: 85px; height: 85px; }
+  .header h1 { 
+    font-size: clamp(1.3rem, 5vw, 1.8rem); 
+    letter-spacing: 1px; 
+    line-height: 1.2;
+    padding: 0 10px;
+  }
   
-  .main-content { padding: 25px 15px; }
-  .page-card { padding: 35px 20px; }
+  /* Main Content */
+  .main-content { padding: 20px 12px; }
+  
+  /* Page Card — Lebih menarik di mobile */
+  .page-card { 
+    padding: 28px 18px 24px; 
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    border-left: 4px solid var(--primary-color);
+  }
+  .page-card:hover { 
+    transform: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  }
   .page-card h2 { 
-    font-size: 1.8rem; 
+    font-size: 1.5rem; 
     text-align: center;
     line-height: 1.3;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
   }
 
+  /* Content Body — Eye-Catching Typography */
   .content-body {
-    font-size: 1.05rem;
-    line-height: 1.7;
+    font-size: 1rem;
+    line-height: 1.8;
     text-align: left;
+    color: #374151;
   }
 
   .content-body p {
-    margin-bottom: 1.2rem;
+    margin-bottom: 1rem;
+  }
+
+  .content-body strong {
+    color: var(--primary-color);
   }
 
   .content-body * {
@@ -641,19 +678,31 @@ button {
   }
 
   .content-body h3 {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
+    color: var(--nav-bg);
+    margin-top: 1.5rem;
   }
 
-  /* Mobile Navbar */
+  /* Gambar di content — lebih rapi di mobile */
+  .content-body img {
+    border-radius: 10px;
+    margin: 15px 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+
+  /* ═══════════════════════════════════════════
+     MOBILE NAVBAR
+     ═══════════════════════════════════════════ */
   .mobile-menu-toggle {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 20px;
+    padding: 14px 18px;
     color: white;
     cursor: pointer;
     font-weight: bold;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    font-size: 0.95rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
   }
 
   .nav-links {
@@ -661,6 +710,7 @@ button {
     flex-direction: column;
     width: 100%;
     background: var(--nav-bg);
+    animation: fadeIn 0.2s ease;
   }
 
   .nav-links.mobile-open {
@@ -669,9 +719,10 @@ button {
 
   .nav-links > li {
     width: 100%;
-    padding: 15px 20px;
+    padding: 14px 18px;
     border-bottom: 1px solid rgba(255,255,255,0.05);
     text-align: left;
+    font-size: 0.9rem;
   }
 
   .nav-links > li.active::after {
@@ -680,6 +731,7 @@ button {
 
   .nav-links > li.active {
     border-left: 4px solid var(--secondary-color);
+    background-color: rgba(255,255,255,0.05);
   }
 
   /* Dropdown Mobile */
@@ -687,8 +739,10 @@ button {
     position: static;
     width: 100%;
     box-shadow: none;
-    background: rgba(0,0,0,0.2);
+    background: rgba(0,0,0,0.15);
     display: none;
+    border-radius: 0;
+    border-top: none;
   }
 
   .dropdown.dropdown-open .dropdown-menu {
@@ -709,15 +763,25 @@ button {
     border-left: none;
   }
 
-  /* Admin Dashboard Mobile */
+  /* ═══════════════════════════════════════════
+     FOOTER — Lebih compact di mobile
+     ═══════════════════════════════════════════ */
+  .footer {
+    padding: 35px 15px;
+    font-size: 0.85rem;
+  }
+
+  /* ═══════════════════════════════════════════
+     ADMIN DASHBOARD MOBILE
+     ═══════════════════════════════════════════ */
   .editor-container {
-    padding: 20px;
+    padding: 15px;
   }
   
   .editor-header-aksi {
     flex-direction: column;
     gap: 10px;
-    padding: 15px;
+    padding: 12px;
   }
 }
 
