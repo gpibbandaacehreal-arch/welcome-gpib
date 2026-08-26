@@ -23,7 +23,7 @@ import { fetchFromGoogleScript, postToGoogleScript } from './services/googleScri
 // Types
 type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Organisasi Gereja' | 'Data Umat' | 'Download' | 'Login' 
   | 'PA' | 'PT' | 'GP' | 'PKB' | 'PKP' | 'PKLU' 
-  | 'GermasaLH' | 'PG' | 'Inforkom-Litbang' | 'APanel' | (string & {});
+  | 'Germasa' | 'PEG' | 'Inforkom-Litbang' | 'APanel' | (string & {});
 
 
 interface ContentBlock {
@@ -99,12 +99,12 @@ const DEFAULT_CONTENT: FullContent = {
       title: 'Persekutuan Kaum Lanjut Usia (PKLU)',
       content: '<p><strong>Tugas Pokok:</strong><br>Melaksanakan pelayanan dan pembinaan kepada kaum lanjut usia/pensiunan di jemaat.</p><p><strong>Fungsi:</strong><br>1. Memberikan perhatian dan pendampingan rohani kepada lansia jemaat.<br>2. Menyelenggarakan persekutuan dan kegiatan yang mendukung kesehatan serta kesejahteraan lansia.<br>3. Menjadi wadah berbagi pengalaman hidup iman dan kebijaksanaan antargenerasi.</p>'
     },
-    'GermasaLH': {
-      title: 'Komisi Gereja, Masyarakat, Agama dan Lingkungan Hidup (GermasaLH)',
+    'Germasa': {
+      title: 'Germasa',
       content: '<p><strong>Tugas Pokok:</strong><br>Menangani urusan hubungan gereja dengan masyarakat, antarumat beragama, serta kelestarian lingkungan hidup.</p><p><strong>Fungsi:</strong><br>1. Membangun dialog dan kerjasama oikumenis serta antariman di Banda Aceh.<br>2. Melaksanakan aksi sosial dan advokasi terhadap isu-isu kemasyarakatan.<br>3. Mengedukasi jemaat dalam upaya pelestarian lingkungan hidup.</p>'
     },
-    'PG': {
-      title: 'Komisi Pembangunan Gereja (PG)',
+    'PEG': {
+      title: 'Komisi Pembangunan Ekonomi Gereja (PEG)',
       content: '<p><strong>Tugas Pokok:</strong><br>Bertanggung jawab atas perencanaan, pelaksanaan, dan pengawasan pembangunan serta pemeliharaan sarana prasarana gereja.</p><p><strong>Fungsi:</strong><br>1. Menyusun rencana induk pembangunan fisik gereja.<br>2. Mengelola proses renovasi dan perawatan gedung serta aset gereja.<br>3. Memastikan ketersediaan fasilitas yang representatif untuk ibadah dan pelayanan.</p>'
     },
     'Inforkom-Litbang': {
@@ -375,8 +375,8 @@ function App() {
              editorPageKey === 'GP' ? 'Gerakan Pemuda (GP)' :
              editorPageKey === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
              editorPageKey === 'PKP' ? 'Persekutuan Kaum Perempuan (PKP)' :
-             editorPageKey === 'GermasaLH' ? 'GermasaLH' :
-             editorPageKey === 'PG' ? 'Komisi Pembangunan Gereja (PG)' :
+             editorPageKey === 'Germasa' ? 'Germasa' :
+             editorPageKey === 'PEG' ? 'Komisi Pembangunan Ekonomi Gereja (PEG)' :
              editorPageKey === 'Inforkom-Litbang' ? 'Inforkom-Litbang' : activeTab,
       content: `<p>Informasi & Kegiatan ${activeTab} GPIB Banda Aceh.</p>`
     };
@@ -1242,8 +1242,8 @@ function App() {
              pageKey === 'GP' ? 'Gerakan Pemuda (GP)' :
              pageKey === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
              pageKey === 'PKP' ? 'Persekutuan Kaum Perempuan (PKP)' :
-             pageKey === 'GermasaLH' ? 'GermasaLH' :
-             pageKey === 'PG' ? 'Komisi Pembangunan Gereja (PG)' :
+             pageKey === 'Germasa' ? 'Germasa' :
+             pageKey === 'PEG' ? 'Komisi Pembangunan Ekonomi Gereja (PEG)' :
              pageKey === 'Inforkom-Litbang' ? 'Inforkom-Litbang' : activeTab,
       content: `<p>Informasi & Kegiatan ${activeTab} GPIB Banda Aceh.</p>`
     };
@@ -1454,7 +1454,7 @@ function App() {
             </li>
           ))}
 
-          <li className={`dropdown ${['Organisasi Gereja', 'PA', 'PT', 'GP', 'PKB', 'PKP', 'PKLU', 'GermasaLH', 'PG', 'Inforkom-Litbang'].includes(activeTab) ? 'active' : ''} ${isDropdownOpen ? 'dropdown-open' : ''}`}>
+          <li className={`dropdown ${['Organisasi Gereja', 'PA', 'PT', 'GP', 'PKB', 'PKP', 'PKLU', 'Germasa', 'PEG', 'Inforkom-Litbang'].includes(activeTab) ? 'active' : ''} ${isDropdownOpen ? 'dropdown-open' : ''}`}>
             <span onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
               Organisasi Gereja {isDropdownOpen ? '▴' : '▾'}
             </span>
@@ -1474,8 +1474,8 @@ function App() {
               <li className="dropdown-submenu">
                 <span>KOMISI ▸</span>
                 <ul className="submenu-list">
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('GermasaLH'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>GermasaLH</li>
-                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PG'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Komisi PG</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('Germasa'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Germasa</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PEG'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Komisi PEG</li>
                   <li onClick={(e) => { e.stopPropagation(); setActiveTab('Inforkom-Litbang'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Inforkom-Litbang</li>
                 </ul>
               </li>
