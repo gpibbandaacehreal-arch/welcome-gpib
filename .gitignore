@@ -31,3 +31,7 @@ website-gpib-banda-aceh-*.json
 
 # Tooling caches
 .aider.tags.cache.v4/
+
+# Local notes (tidak di-push)
+TUGAS_HARI_INI.md
+apps-script-update.gs
