@@ -814,3 +814,251 @@ button {
   display: inline-block;
   animation: spin 1s linear infinite;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   DATA UMAT FORM — Spesifikasi dbase GPIB
+   ═══════════════════════════════════════════════════════════════ */
+
+.data-umat-form {
+  width: 100%;
+}
+
+.form-section {
+  margin-bottom: 35px;
+  padding: 25px;
+  background: #fafafa;
+  border-radius: 12px;
+  border: 1px solid #eee;
+}
+
+.form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.2rem;
+  color: var(--nav-bg);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--secondary-color);
+}
+
+.section-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--nav-bg);
+  color: white;
+  border-radius: 50%;
+  font-size: 0.9rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.form-section-desc {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 20px;
+  font-style: italic;
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 4px;
+}
+
+.required {
+  color: #c62828;
+  font-weight: 700;
+}
+
+/* Form Validation Errors */
+.input-error {
+  border-color: #c62828 !important;
+  box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.15) !important;
+}
+
+.field-error {
+  display: block;
+  font-size: 0.78rem;
+  color: #c62828;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.form-error-summary {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+}
+
+.form-error-summary p {
+  margin: 0 0 8px;
+  color: #991b1b;
+  font-size: 0.9rem;
+}
+
+.form-error-summary ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.form-error-summary li {
+  color: #b91c1c;
+  font-size: 0.82rem;
+  margin-bottom: 3px;
+}
+
+/* Sektor Info Box */
+.sektor-info-box {
+  margin-top: 10px;
+  padding: 12px 15px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: #0c4a6e;
+}
+
+.sektor-info-title {
+  margin: 0 0 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.sektor-info-list {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+
+.sektor-info-list li {
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+/* Document Upload Labels */
+.doc-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.doc-code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 24px;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0 6px;
+}
+
+.upload-status {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+.file-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--nav-bg);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.file-link:hover {
+  text-decoration: underline;
+}
+
+/* Majelis Section (Conditional) */
+.majelis-section {
+  background: #fff8e1;
+  border: 2px solid #ffc107;
+}
+
+.majelis-title {
+  border-bottom-color: #ffc107;
+}
+
+/* Export Section */
+.export-section {
+  padding: 25px;
+  background: #f0f9ff;
+  border-radius: 12px;
+  border: 1px solid #bae6fd;
+}
+
+.export-stats {
+  display: flex;
+  gap: 30px;
+  margin: 20px 0;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px 25px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e0f2fe;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--nav-bg);
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+.export-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.export-note {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 15px;
+}
+
+.export-note a {
+  color: var(--nav-bg);
+  font-weight: 500;
+}
+
+/* Admin Verification List */
+.admin-verification-list {
+  margin-top: 50px;
+  padding-top: 30px;
+  border-top: 2px solid var(--secondary-color);
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
