@@ -18,3 +18,34 @@ export interface SupabaseProposal {
   no_urut: number;
   link_download: string;
 }
+
+/**
+ * Tipe data untuk tabel data_jemaat di Supabase.
+ * Digunakan untuk sinkronisasi langsung dengan Supabase.
+ */
+export interface SupabaseDataJemaat {
+  id?: string;
+  nama_lengkap: string;
+  username_baru: string;
+  golongan_darah: string;
+  email_aktif: string;
+  no_telepon: string;
+  status_warga: string;
+  tgl_baptis: string;
+  tgl_sidi: string;
+  status_perkawinan_gereja: string;
+  alamat_ktp: string;
+  alamat_domisili: string;
+  sektor_pelayanan: string;
+  berkas_A1: string;
+  berkas_A2: string;
+  berkas_A24: string;
+  berkas_A3: string;
+  berkas_majelis_surat_kesediaan: string;
+  berkas_majelis_surat_pilihan: string;
+  berkas_majelis_surat_loyalitas: string;
+  berkas_majelis_surat_loyalitas_pasangan: string;
+  is_pending: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
