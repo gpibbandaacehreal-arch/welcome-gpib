@@ -180,7 +180,18 @@ function App() {
 
 
   // Data Jemaat Baru (sesuai spesifikasi dbase GPIB)
-  const [dataJemaatList, setDataJemaatList] = useState<DataJemaat[]>([])
+  // Load awal langsung dari localStorage via lazy initializer
+  // (pola sama dengan siteContent) agar tidak ada setState di dalam effect.
+  const [dataJemaatList, setDataJemaatList] = useState<DataJemaat[]>(() => {
+    try {
+      const saved = localStorage.getItem('gpibDataJemaat');
+      if (saved) {
+        const parsed = JSON.parse(saved) as DataJemaat[];
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch { /* abaikan error parsing */ }
+    return [];
+  });
   const [editingJemaat, setEditingJemaat] = useState<DataJemaat | null>(null)
   const [isSubmittingJemaat, setIsSubmittingJemaat] = useState(false)
   const [userJemaatSearch, setUserJemaatSearch] = useState('')
@@ -438,19 +449,6 @@ function App() {
     fetchSiteSettings();
   }, []);
 
-  // Load Data Jemaat dari localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('gpibDataJemaat');
-      if (saved) {
-        const parsed = JSON.parse(saved) as DataJemaat[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setDataJemaatList(parsed);
-        }
-      }
-    } catch { /* abaikan error parsing */ }
-  }, []);
-
   useEffect(() => {
     const bg = siteContent?.settings?.siteBgColor || '#ffffff';
     document.body.style.backgroundColor = bg;
@@ -600,7 +598,8 @@ function App() {
   };
 
   const handleApproveJemaat = async (jemaat: DataJemaat) => {
-    const approved: DataJemaat = { ...jemaat, isPending: false, id: 'approved_' + Date.now() };
+    // ID deterministik dari data sumber (bukan Date.now) agar render tetap murni
+    const approved: DataJemaat = { ...jemaat, isPending: false, id: 'approved_' + (jemaat.id || 'x') };
     const newList = dataJemaatList
       .filter(j => j.nama_lengkap.toLowerCase() !== jemaat.nama_lengkap.toLowerCase())
       .concat(approved);
