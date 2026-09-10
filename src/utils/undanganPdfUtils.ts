@@ -17,7 +17,8 @@ export const generateUndanganPDF = async (data: UndanganData): Promise<Uint8Arra
 
   // Template hanya ~380 KB; fetch saat dibutuhkan saja (browser biasanya
   // sudah menyimpannya di cache HTTP setelah unduhan pertama).
-  const res = await fetch('/undangan%20gpib%2030%20tahun.pdf');
+  // Nama file tanpa spasi agar URL aman & header cache vercel.json match.
+  const res = await fetch('/undangan-gpib-30-tahun.pdf');
   if (!res.ok) {
     throw new Error(`Gagal mengambil template undangan: ${res.status} ${res.statusText}`);
   }
