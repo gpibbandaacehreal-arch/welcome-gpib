@@ -892,6 +892,22 @@ function App() {
     await fetchSupabaseUndangan();
   };
 
+  const handleEditUndanganSupabase = async (id: number, updates: Partial<SupabaseUndangan>) => {
+    const { data, error } = await supabase
+      .from('riwayat_undangan')
+      .update(updates)
+      .eq('id', id)
+      .select();
+    if (error) {
+      console.error('Error updating undangan:', error);
+      throw error;
+    }
+    if (!data || data.length === 0) {
+      throw new Error('Gagal memperbaharui data. Akses (RLS) di Supabase memblokir edit. Pastikan RLS diizinkan untuk UPDATE pada tabel riwayat_undangan di Supabase SQL Editor.');
+    }
+    await fetchSupabaseUndangan();
+  };
+
 
   const renderPage = () => {
     if (activeTab === 'APanel' || location.pathname === '/admin/apanel') {
@@ -926,8 +942,10 @@ function App() {
     if (activeTab === 'Undangan') {
       return (
         <UndanganGenerator
+          isLoggedIn={isLoggedIn}
           undanganList={supabaseUndangan}
           onAddUndangan={handleAddUndanganSupabase}
+          onEditUndangan={handleEditUndanganSupabase}
           onDeleteUndangan={handleDeleteUndanganSupabase}
         />
       )
