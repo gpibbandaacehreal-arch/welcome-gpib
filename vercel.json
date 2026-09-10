@@ -7,7 +7,7 @@
   ],
   "headers": [
     {
-      "source": "/(favicon\\.png|LOGO_GPIB_BANDA_ACEH\\.png|COVER\\.pdf|ISI\\.pdf)",
+      "source": "/(favicon\\.png|LOGO_GPIB_BANDA_ACEH\\.png|COVER\\.pdf|ISI\\.pdf|undangan gpib 30 tahun\\.pdf)",
       "headers": [
         {
           "key": "Cache-Control",

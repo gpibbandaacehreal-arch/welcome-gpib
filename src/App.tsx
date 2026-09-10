@@ -8,11 +8,13 @@ import ErrorBoundary from './components/ErrorBoundary'
 // Keduanya dipecah ke chunk terpisah agar bundle awal tetap ringan.
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'))
 const APanel = lazy(() => import('./components/APanel'))
+// Halaman Undangan dipecah ke chunk terpisah — pdf-lib & template baru dimuat saat tombol generate ditekan.
+const UndanganGenerator = lazy(() => import('./components/UndanganGenerator'))
 import { toImageKitUrl, filterHtmlImages } from './utils/imageUtils'
 import DownloadProposal from './components/DownloadProposal'
 import DataUmatForm from './components/DataUmatForm'
 import DataUmatExport from './components/DataUmatExport'
-import { supabase, type SupabaseProposal } from './services/supabase'
+import { supabase, type SupabaseProposal, type SupabaseUndangan } from './services/supabase'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import { normalizeSubMenuKey } from './utils/menuUtils'
@@ -165,6 +167,7 @@ function App() {
   })
   const [syncError, setSyncError] = useState(false)
   const [supabaseProposals, setSupabaseProposals] = useState<SupabaseProposal[]>([])
+  const [supabaseUndangan, setSupabaseUndangan] = useState<SupabaseUndangan[]>([])
   
   // Editor states
   const [editTitle, setEditTitle] = useState('')
@@ -327,6 +330,45 @@ function App() {
       console.error('Exception saat fetch Supabase:', err);
     }
   };
+
+  const fetchSupabaseUndangan = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('riwayat_undangan')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error Supabase fetch undangan:', error.message);
+        if (error.code === 'PGRST116' || error.message.includes('not found') || error.message.includes('schema cache')) {
+          console.error('PENTING: Tabel riwayat_undangan belum dibuat di Supabase! Jalankan supabase/migrations/20260910_create_riwayat_undangan.sql.');
+        }
+      } else if (data) {
+        setSupabaseUndangan(data);
+      }
+    } catch (err) {
+      console.error('Exception saat fetch Supabase undangan:', err);
+    }
+  };
+
+  // Riwayat undangan + realtime Supabase hanya aktif saat tab Undangan dibuka —
+  // hemat bandwidth & koneksi websocket untuk pengunjung yang tidak membutuhkannya.
+  useEffect(() => {
+    if (activeTab !== 'Undangan') return;
+
+    const initialTimer = setTimeout(() => { void fetchSupabaseUndangan(); }, 0);
+    const channel = supabase
+      .channel('public:riwayat_undangan')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'riwayat_undangan' }, () => {
+        void fetchSupabaseUndangan();
+      })
+      .subscribe();
+
+    return () => {
+      clearTimeout(initialTimer);
+      void supabase.removeChannel(channel);
+    };
+  }, [activeTab]);
 
   // Riwayat download + realtime Supabase hanya aktif saat tab Download dibuka —
   // hemat bandwidth & koneksi websocket untuk pengunjung yang tidak membutuhkannya.
@@ -813,6 +855,44 @@ function App() {
     await fetchSupabaseProposals();
   };
 
+  const handleAddUndanganSupabase = async (namaUndangan: string, pic: string, tanggalUndangan: string) => {
+    const newRecord = {
+      nama_undangan: namaUndangan,
+      pic,
+      tanggal_undangan: tanggalUndangan
+    };
+
+    const { data, error } = await supabase
+      .from('riwayat_undangan')
+      .insert([newRecord])
+      .select();
+
+    if (error) {
+      console.error('Error adding undangan:', error);
+      if (error.message.includes('schema cache') || error.message.includes('not found')) {
+        throw new Error('Tabel riwayat_undangan belum ada di Supabase. Jalankan supabase/migrations/20260910_create_riwayat_undangan.sql di Supabase SQL Editor.');
+      }
+      throw error;
+    }
+    return data;
+  };
+
+  const handleDeleteUndanganSupabase = async (id: number) => {
+    const { data, error } = await supabase
+      .from('riwayat_undangan')
+      .delete()
+      .eq('id', id)
+      .select();
+    if (error) {
+      console.error('Error deleting undangan:', error);
+      throw error;
+    }
+    if (!data || data.length === 0) {
+      throw new Error('Gagal menghapus data. Akses (RLS) di Supabase memblokir hapus. Pastikan RLS diizinkan untuk DELETE pada tabel riwayat_undangan di Supabase SQL Editor.');
+    }
+    await fetchSupabaseUndangan();
+  };
+
 
   const renderPage = () => {
     if (activeTab === 'APanel' || location.pathname === '/admin/apanel') {
@@ -840,6 +920,16 @@ function App() {
           onAddProposal={handleAddProposalSupabase}
           onEditProposal={handleEditProposalSupabase}
           onDeleteProposal={handleDeleteProposalSupabase}
+        />
+      )
+    }
+
+    if (activeTab === 'Undangan') {
+      return (
+        <UndanganGenerator
+          undanganList={supabaseUndangan}
+          onAddUndangan={handleAddUndanganSupabase}
+          onDeleteUndangan={handleDeleteUndanganSupabase}
         />
       )
     }
@@ -1201,6 +1291,13 @@ function App() {
             onClick={() => { setActiveTab('Download'); setIsMobileMenuOpen(false); navigate('/'); }}
           >
             PROPOSAL
+          </li>
+
+          <li 
+            className={activeTab === 'Undangan' ? 'active' : ''}
+            onClick={() => { setActiveTab('Undangan'); setIsMobileMenuOpen(false); navigate('/'); }}
+          >
+            Undangan
           </li>
 
           {isLoggedIn ? (
