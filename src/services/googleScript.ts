@@ -9,6 +9,13 @@ export const GOOGLE_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycby4IEYEAPeR8TqD54TjuZ4jIGxAEeJN3U-KJenLNkk7g_Wq1ui2nweS0MHM_x4kCU5D/exec';
 
 /**
+ * Endpoint proxy serverless di Vercel yang memanggil Google Apps Script
+ * dari sisi server sehingga tidak ada masalah CORS di browser.
+ * Fallback ke URL langsung jika proxy tidak tersedia (mis. development lokal).
+ */
+const PROXY_URL = '/api/googleScriptProxy';
+
+/**
  * Batas waktu tunggu respons GET (ms). Apps Script sering lambat (~10-20 dtk
  * cold start + baca spreadsheet), jadi 10 dtk terlalu ketat dan membuat
  * banner peringatan muncul padahal sinkronisasi sebenarnya berjalan.
@@ -35,6 +42,18 @@ async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs: numb
 
 /** Ambil data lengkap dari Google Apps Script (GET). Melempar error jika bukan respons 2xx / timeout. */
 export async function fetchFromGoogleScript(): Promise<Record<string, unknown>> {
+  // Utamakan proxy serverless (bebas CORS). Jika proxy gagal / tidak tersedia,
+  // fallback ke panggilan langsung ke Google Apps Script.
+  try {
+    const proxyResp = await fetchWithTimeout(`${PROXY_URL}?t=${Date.now()}`);
+    if (proxyResp.ok) {
+      return proxyResp.json();
+    }
+    // Proxy returned non-2xx — fall through to direct call
+  } catch {
+    // Proxy unreachable (e.g. local dev) — fall through to direct call
+  }
+
   const response = await fetchWithTimeout(`${GOOGLE_SCRIPT_URL}?t=${Date.now()}`);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -50,12 +69,41 @@ export async function fetchFromGoogleScript(): Promise<Record<string, unknown>> 
  * mengklaim "tersimpan" padahal gagal. Timeout mencegah UI menggantung.
  */
 export async function postToGoogleScript(payload: Record<string, unknown>): Promise<void> {
+  const body = JSON.stringify(payload);
+
+  // Utamakan proxy serverless (bebas CORS)
+  try {
+    const proxyResp = await fetchWithTimeout(
+      PROXY_URL,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body,
+      },
+      SAVE_TIMEOUT_MS
+    );
+    if (proxyResp.ok) {
+      try {
+        const result = (await proxyResp.json()) as { status?: string; message?: string } | null;
+        if (result && result.status === 'error') {
+          throw new Error(result.message || 'Server menolak penyimpanan');
+        }
+      } catch (err) {
+        if (err instanceof SyntaxError) { return; }
+        throw err;
+      }
+      return;
+    }
+  } catch {
+    // Proxy unreachable — fall through to direct call
+  }
+
   const response = await fetchWithTimeout(
     GOOGLE_SCRIPT_URL,
     {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(payload),
+      body,
     },
     SAVE_TIMEOUT_MS
   );
