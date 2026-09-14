@@ -60,6 +60,82 @@ export const compressImage = (base64Str: string, maxWidth = 800, quality = 0.7):
 };
 
 /**
+ * Kompresi file gambar (dari input type="file") sebelum diunggah ke storage.
+ * - Gambar diperkecil lebarnya ke `maxWidth` & di-encode ulang (JPEG q`quality`).
+ * - PNG/webp yang punya transparansi tetap PNG (hanya diperkecil) agar tidak
+ *   muncul latar hitam; sisanya jadi JPEG yang jauh lebih kecil.
+ * - PDF, GIF animasi, dan file yang gagal diproses dilewatkan apa adanya.
+ * - Jika hasil kompresi lebih besar dari aslinya, file asli dikembalikan.
+ */
+export const compressImageFile = async (
+  file: File,
+  maxWidth = 1600,
+  quality = 0.72
+): Promise<File> => {
+  try {
+    // Hanya proses gambar raster; PDF & GIF animasi dilewati
+    if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+
+    // Sudah cukup kecil? Jangan buang waktu & kualitas.
+    if (file.size < 300 * 1024 && img.width <= maxWidth) return file;
+
+    let width = img.width;
+    let height = img.height;
+    if (width > maxWidth) {
+      height = Math.round((maxWidth / width) * height);
+      width = maxWidth;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // Deteksi transparansi pada hasil canvas (memori terbatas karena sudah diperkecil)
+    let hasAlpha = false;
+    if (file.type === 'image/png' || file.type === 'image/webp') {
+      try {
+        const d = ctx.getImageData(0, 0, width, height).data;
+        for (let i = 3; i < d.length; i += 4) {
+          if (d[i] < 255) { hasAlpha = true; break; }
+        }
+      } catch { /* canvas tainted — anggap tanpa alpha */ }
+    }
+
+    const contentType = hasAlpha ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise<Blob | null>(resolve =>
+      canvas.toBlob(resolve, contentType, hasAlpha ? undefined : quality)
+    );
+
+    // Kompresi tidak menguntungkan? Pakai file asli.
+    if (!blob || blob.size >= file.size) return file;
+
+    const ext = contentType === 'image/png' ? 'png' : 'jpg';
+    const baseName = file.name.replace(/\.[^.]+$/, '') || 'image';
+    return new File([blob], `${baseName}.${ext}`, { type: contentType });
+  } catch {
+    // Gagal membaca/dekode (mis. HEIC) — unggah file asli apa adanya
+    return file;
+  }
+};
+
+/**
  * Mengekstrak File ID dari berbagai pola URL Google Drive
  * @param url URL gambar Google Drive
  * @returns string File ID atau null jika tidak cocok
@@ -223,14 +299,15 @@ export const uploadImageToCloud = async (input: string | File): Promise<string> 
       
     return toImageKitUrl(publicUrl);
   } else {
-    // Handling File object
-    const contentType = input.type || 'image/jpeg';
-    const extension = input.name.split('.').pop() || 'jpg';
+    // Handling File object — kompres dulu agar upload & loading situs ringan
+    const file = await compressImageFile(input);
+    const contentType = file.type || 'image/jpeg';
+    const extension = file.name.split('.').pop() || 'jpg';
     const fileName = `images/img_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${extension}`;
 
     const { error } = await supabase.storage
       .from('beranda-pdf')
-      .upload(fileName, input, { contentType, upsert: true });
+      .upload(fileName, file, { contentType, upsert: true });
 
     if (error) {
       throw new Error('Gagal mengunggah file gambar ke cloud storage: ' + error.message);

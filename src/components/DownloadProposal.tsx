@@ -1,7 +1,33 @@
 import React, { useState } from 'react';
 import { generateProposalPDF } from '../utils/pdfUtils';
+import { generateRiwayatProposalPDF, type ProposalRiwayatRow } from '../utils/proposalPdfUtils';
 import { getErrorMessage } from '../utils/errorUtils';
 import { type SupabaseProposal } from '../services/supabase';
+
+/**
+ * Helper: unduh blob sebagai file. xlsx & pdf-lib di-import dinamis di pemanggil
+ * agar tidak membebani bundle awal situs.
+ */
+const downloadBlob = (blob: Blob, fileName: string) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+};
+
+/** Peta riwayat proposal menjadi baris rekap untuk export .xlsx / .pdf */
+const mapRiwayat = (list: SupabaseProposal[]): ProposalRiwayatRow[] =>
+  list.map((r, i) => ({
+    no: list.length - i,
+    nomor_surat: r.nomor_surat || '-',
+    tujuan_surat: r.tujuan_surat || '-',
+    pemohon: r.pemohon || '-',
+    tanggal_surat: r.tanggal_surat || '-',
+  }));
 
 interface DownloadProposalProps {
   isLoggedIn: boolean;
@@ -33,6 +59,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
   const [editNomor, setEditNomor] = useState('');
   const [editPemohon, setEditPemohon] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [nextNomorSurat, setNextNomorSurat] = useState<string>('');
 
   // Filter and Sort proposals
@@ -145,6 +172,51 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
       setTimeout(() => URL.revokeObjectURL(url), 100);
     } catch (err) {
       alert(`Gagal mendownload PDF: ${getErrorMessage(err, 'Error tidak diketahui')}`);
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════
+  // EXPORT TABEL RIWAYAT PROPOSAL (.xlsx & .pdf)
+  // ═══════════════════════════════════════════════════════════
+  const handleExportExcel = async () => {
+    const data = mapRiwayat(history);
+    if (data.length === 0) {
+      alert('Tidak ada data proposal untuk disimpan.');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      // Dynamic import: xlsx (~400 KB) hanya dimuat saat tombol ditekan
+      const XLSX = await import('xlsx');
+      const ws = XLSX.utils.json_to_sheet(data);
+      const colWidths = Object.keys(data[0]).map(key => ({
+        wch: Math.max(key.length + 2, ...data.map(row => String((row as unknown as Record<string, unknown>)[key] || '').length + 2)),
+      }));
+      ws['!cols'] = colWidths;
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Rekap Proposal');
+      XLSX.writeFile(wb, `Rekap_Proposal_GPIB_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch (err) {
+      alert(`Gagal membuat Excel: ${getErrorMessage(err, 'Error tidak diketahui')}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    const data = mapRiwayat(history);
+    if (data.length === 0) {
+      alert('Tidak ada data proposal untuk disimpan.');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const pdfBytes = await generateRiwayatProposalPDF(data);
+      downloadBlob(new Blob([pdfBytes as BlobPart], { type: 'application/pdf' }), `Rekap_Proposal_GPIB_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (err) {
+      alert(`Gagal membuat PDF rekap: ${getErrorMessage(err, 'Error tidak diketahui')}`);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -269,7 +341,7 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
                         </>
                       ) : (
                         <>
-                          <button className="btn-edit-small" onClick={() => handleDownload(record)}>Download</button>
+                          <button className="btn-edit-small" onClick={() => handleDownload(record)} disabled={isExporting}>Download</button>
                           {isLoggedIn && (
                             <>
                               <button className="btn-edit-small" style={{ backgroundColor: '#2196F3' }} onClick={() => handleEdit(record)}>Edit</button>
@@ -290,6 +362,17 @@ const DownloadProposal: React.FC<DownloadProposalProps> = ({ isLoggedIn, proposa
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Simpan rekap tabel: .xlsx & .pdf (mengikuti hasil pencarian aktif) */}
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
+          <button className="btn-save" onClick={handleExportExcel} disabled={isExporting || history.length === 0}>
+            📥 Simpan Excel (.xlsx)
+          </button>
+          <button className="btn-save" onClick={handleExportPdf} disabled={isExporting || history.length === 0}>
+            📥 Simpan PDF (.pdf)
+          </button>
+          {isExporting && <span style={{ alignSelf: 'center', color: '#64748b', fontSize: '0.85rem' }}>⏳ Menyiapkan file...</span>}
         </div>
       </div>
     </div>

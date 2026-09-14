@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import * as XLSX from 'xlsx';
 import { generateUndanganPDF, generateRiwayatUndanganPDF, type UndanganRiwayatRow } from '../utils/undanganPdfUtils';
 import { getErrorMessage } from '../utils/errorUtils';
 import { type SupabaseUndangan } from '../services/supabase';
@@ -131,7 +130,7 @@ const UndanganGenerator: React.FC<UndanganGeneratorProps> = ({ isLoggedIn, undan
       tanggal_undangan: r.tanggal_undangan || '-',
     }));
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const data = mapRiwayat();
     if (data.length === 0) {
       alert('Tidak ada data riwayat untuk disimpan.');
@@ -139,6 +138,8 @@ const UndanganGenerator: React.FC<UndanganGeneratorProps> = ({ isLoggedIn, undan
     }
     setIsExporting(true);
     try {
+      // Dynamic import: xlsx (~400 KB) hanya dimuat saat tombol ditekan
+      const XLSX = await import('xlsx');
       const ws = XLSX.utils.json_to_sheet(data);
       const colWidths = Object.keys(data[0]).map(key => ({
         wch: Math.max(key.length + 2, ...data.map(row => String((row as unknown as Record<string, unknown>)[key] || '').length + 2)),
@@ -335,10 +336,10 @@ const UndanganGenerator: React.FC<UndanganGeneratorProps> = ({ isLoggedIn, undan
 
         {/* Simpan tabel riwayat: .xlsx & .pdf */}
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
-          <button className="btn-save" onClick={handleExportExcel} disabled={isExporting || history.length === 0}>
+          <button className="btn-save" onClick={() => { void handleExportExcel(); }} disabled={isExporting || history.length === 0}>
             📥 Simpan Excel (.xlsx)
           </button>
-          <button className="btn-save" onClick={handleExportPdf} disabled={isExporting || history.length === 0}>
+          <button className="btn-save" onClick={() => { void handleExportPdf(); }} disabled={isExporting || history.length === 0}>
             📥 Simpan PDF (.pdf)
           </button>
         </div>

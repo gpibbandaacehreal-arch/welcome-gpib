@@ -9,11 +9,11 @@ import ErrorBoundary from './components/ErrorBoundary'
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'))
 const APanel = lazy(() => import('./components/APanel'))
 // Halaman Undangan dipecah ke chunk terpisah — pdf-lib & template baru dimuat saat tombol generate ditekan.
+const DownloadProposal = lazy(() => import('./components/DownloadProposal'))
+const DataUmatForm = lazy(() => import('./components/DataUmatForm'))
+const DataUmatExport = lazy(() => import('./components/DataUmatExport'))
 const UndanganGenerator = lazy(() => import('./components/UndanganGenerator'))
 import { toImageKitUrl, filterHtmlImages } from './utils/imageUtils'
-import DownloadProposal from './components/DownloadProposal'
-import DataUmatForm from './components/DataUmatForm'
-import DataUmatExport from './components/DataUmatExport'
 import { supabase, type SupabaseProposal, type SupabaseUndangan } from './services/supabase'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'

@@ -8,6 +8,7 @@ import {
   SEKTOR_OPTIONS,
 } from '../types/dataUmat';
 import { validateFile, uploadDocument } from '../utils/documentUpload';
+import { compressImageFile } from '../utils/imageUtils';
 
 interface DataUmatFormProps {
   initialData?: DataJemaat;
@@ -76,7 +77,10 @@ const DataUmatForm: React.FC<DataUmatFormProps> = ({
 
       setUploading(prev => ({ ...prev, [field]: true }));
       try {
-        const url = await uploadDocument(file, formData.nama_lengkap || 'unknown', kodeBerkas);
+        // Foto (JPG/PNG) dikompres dulu agar upload cepat & hemat storage;
+        // PDF dan file non-gambar dilewatkan apa adanya oleh compressImageFile.
+        const fileToUpload = await compressImageFile(file);
+        const url = await uploadDocument(fileToUpload, formData.nama_lengkap || 'unknown', kodeBerkas);
         setFormData(prev => ({ ...prev, [field]: url }));
       } catch (error) {
         console.error('Upload gagal:', error);

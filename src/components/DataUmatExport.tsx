@@ -1,5 +1,4 @@
 import React, { useCallback } from 'react';
-import * as XLSX from 'xlsx';
 import type { DataJemaat } from '../types/dataUmat';
 
 interface DataUmatExportProps {
@@ -53,13 +52,15 @@ function mapToExportData(jemaatList: DataJemaat[]) {
 }
 
 const DataUmatExport: React.FC<DataUmatExportProps> = ({ jemaatList }) => {
-  const exportToExcel = useCallback(() => {
+  const exportToExcel = useCallback(async () => {
     const data = mapToExportData(jemaatList);
     if (data.length === 0) {
       alert('Tidak ada data untuk di-export.');
       return;
     }
 
+    // Dynamic import: xlsx (~400 KB) hanya dimuat saat tombol export ditekan
+    const XLSX = await import('xlsx');
     const ws = XLSX.utils.json_to_sheet(data);
 
     // Atur lebar kolom otomatis
@@ -75,13 +76,15 @@ const DataUmatExport: React.FC<DataUmatExportProps> = ({ jemaatList }) => {
     XLSX.writeFile(wb, fileName);
   }, [jemaatList]);
 
-  const exportToCSV = useCallback(() => {
+  const exportToCSV = useCallback(async () => {
     const data = mapToExportData(jemaatList);
     if (data.length === 0) {
       alert('Tidak ada data untuk di-export.');
       return;
     }
 
+    // Dynamic import: xlsx hanya dimuat saat tombol export ditekan
+    const XLSX = await import('xlsx');
     const ws = XLSX.utils.json_to_sheet(data);
     const csv = XLSX.utils.sheet_to_csv(ws);
 
@@ -122,14 +125,14 @@ const DataUmatExport: React.FC<DataUmatExportProps> = ({ jemaatList }) => {
       <div className="export-buttons">
         <button
           className="btn-save"
-          onClick={exportToExcel}
+          onClick={() => { void exportToExcel(); }}
           disabled={officialCount === 0}
         >
           📥 Download Excel (.xlsx)
         </button>
         <button
           className="btn-save"
-          onClick={exportToCSV}
+          onClick={() => { void exportToCSV(); }}
           disabled={officialCount === 0}
           style={{ marginLeft: '10px' }}
         >
