@@ -293,6 +293,11 @@ h1, h2, h3 {
   z-index: 1100;
 }
 
+/* Flyout level 3: submenu di dalam submenu (mis. FUNGSIONARIS ▸ PHMJ / Pendeta / Majelis Jemaat) */
+.submenu-list .submenu-list {
+  min-width: 210px;
+}
+
 /* Main Content */
 .main-content {
   flex: 1;
@@ -762,6 +767,11 @@ button {
     padding-left: 20px;
     box-shadow: none;
     border-left: none;
+  }
+
+  /* Submenu bertingkat di mobile: indentasi ekstra agar terlihat hierarkinya */
+  .submenu-list .submenu-list {
+    padding-left: 36px;
   }
 
   /* ═══════════════════════════════════════════

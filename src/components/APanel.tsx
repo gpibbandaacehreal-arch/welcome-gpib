@@ -13,7 +13,7 @@ interface APanelProps {
 const MENU_POSITIONS = [
   { label: 'Sebelah kanan Beranda', value: 'after-Beranda' },
   { label: 'Sebelah kanan Jadwal Ibadah', value: 'after-Jadwal Ibadah' },
-  { label: 'Sebelah kanan Organisasi Gereja', value: 'after-Organisasi Gereja' },
+  { label: 'Sebelah kanan Direktori', value: 'after-Organisasi Gereja' },
   { label: 'Sebelah kanan Data Umat', value: 'after-Data Umat' },
   { label: 'Sebelah kanan Login', value: 'after-Login' },
 ];
@@ -973,7 +973,7 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
           }}>
             <li style={{ cursor: 'pointer', fontWeight: 'bold' }}>Beranda</li>
             <li style={{ cursor: 'pointer' }}>Jadwal Ibadah</li>
-            <li style={{ cursor: 'pointer' }}>Organisasi Gereja ▾</li>
+            <li style={{ cursor: 'pointer' }}>Direktori ▾</li>
             {/* Show custom menus in preview at their position */}
             {customMenus.filter(m => m.isActive !== false && m.position === 'after-Beranda').map(m => (
               <li key={m.id} style={{ cursor: 'pointer', color: '#fef08a', fontWeight: '600' }}>📂 {m.name}</li>

@@ -7,7 +7,7 @@ export interface CustomMenuItem {
   id: string;
   name: string;
   /** Where to place this menu in the navbar. 
-   *  'after-Beranda' | 'after-Jadwal Ibadah' | 'after-Organisasi Gereja' | 'after-Data Umat' */
+   *  'after-Beranda' | 'after-Jadwal Ibadah' | 'after-Organisasi Gereja' (slot label: Direktori) | 'after-Data Umat' */
   position: string;
   /** Sub-items (folder links) that appear when user clicks this menu */
   items: Array<{

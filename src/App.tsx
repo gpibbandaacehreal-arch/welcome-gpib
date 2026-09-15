@@ -26,7 +26,7 @@ import type { DataJemaat } from './types/dataUmat'
 
 
 // Types
-type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Organisasi Gereja' | 'Data Umat' | 'Download' | 'Login' 
+type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Direktori' | 'Data Umat' | 'Download' | 'Login' 
   | 'PA' | 'PT' | 'GP' | 'PKB' | 'PKP' | 'PKLU' 
   | 'Germasa' | 'PEG' | 'Inforkom-Litbang' | 'APanel' | (string & {});
 
@@ -76,9 +76,21 @@ const DEFAULT_CONTENT: FullContent = {
       title: 'Jadwal Ibadah Mingguan',
       content: '<p><strong>Ibadah Hari Minggu:</strong> 09.00 WIB<br><strong>Ibadah Keluarga:</strong> Rabu, 19.30 WIB<br><strong>Ibadah Pelkat PA/PT:</strong> Sabtu, 16.00 WIB</p>'
     },
-    'Organisasi Gereja': {
-      title: 'Struktur Organisasi & Majelis',
-      content: '<p>Informasi mengenai struktur organisasi Majelis Jemaat, Pelayanan Kategorial (Pelkat), dan Komisi-Komisi di GPIB Banda Aceh.</p>'
+    'Direktori': {
+      title: 'Fungsionaris GPIB Banda Aceh',
+      content: '<p>Informasi mengenai Fungsionaris (PHMJ, Pendeta, Majelis Jemaat), Pelayanan Kategorial (Pelkat), dan Komisi-Komisi di GPIB Banda Aceh.</p>'
+    },
+    'PHMJ': {
+      title: 'Pelaksana Harian Majelis Jemaat (PHMJ)',
+      content: '<p>Informasi mengenai Pelaksana Harian Majelis Jemaat (PHMJ) GPIB Banda Aceh.</p>'
+    },
+    'Pendeta': {
+      title: 'Pendeta GPIB Banda Aceh',
+      content: '<p>Informasi mengenai Pendeta GPIB Banda Aceh.</p>'
+    },
+    'Majelis Jemaat': {
+      title: 'Majelis Jemaat GPIB Banda Aceh',
+      content: '<p>Informasi mengenai Majelis Jemaat GPIB Banda Aceh.</p>'
     },
     'PA': {
       title: 'Pelayanan Anak (PA)',
@@ -416,7 +428,10 @@ function App() {
     setEditBerandaPdf(siteContent.settings?.berandaPdf || '')
 
     const pageData = siteContent.pages?.[editorPageKey] || siteContent.pages?.[activeTab] || {
-      title: editorPageKey === 'PA' ? 'Pelayanan Anak (PA)' :
+      title: editorPageKey === 'PHMJ' ? 'Pelaksana Harian Majelis Jemaat (PHMJ)' :
+             editorPageKey === 'Pendeta' ? 'Pendeta GPIB Banda Aceh' :
+             editorPageKey === 'Majelis Jemaat' ? 'Majelis Jemaat GPIB Banda Aceh' :
+             editorPageKey === 'PA' ? 'Pelayanan Anak (PA)' :
              editorPageKey === 'PT' ? 'Pelayanan Teruna (PT)' :
              editorPageKey === 'GP' ? 'Gerakan Pemuda (GP)' :
              editorPageKey === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
@@ -1037,7 +1052,10 @@ function App() {
 
     const pageKey = normalizeSubMenuKey(activeTab) || activeTab;
     const currentPage = siteContent.pages[pageKey] || siteContent.pages[activeTab] || {
-      title: pageKey === 'PA' ? 'Pelayanan Anak (PA)' :
+      title: pageKey === 'PHMJ' ? 'Pelaksana Harian Majelis Jemaat (PHMJ)' :
+             pageKey === 'Pendeta' ? 'Pendeta GPIB Banda Aceh' :
+             pageKey === 'Majelis Jemaat' ? 'Majelis Jemaat GPIB Banda Aceh' :
+             pageKey === 'PA' ? 'Pelayanan Anak (PA)' :
              pageKey === 'PT' ? 'Pelayanan Teruna (PT)' :
              pageKey === 'GP' ? 'Gerakan Pemuda (GP)' :
              pageKey === 'PKB' ? 'Persekutuan Kaum Bapak (PKB)' :
@@ -1254,12 +1272,19 @@ function App() {
             </li>
           ))}
 
-          <li className={`dropdown ${['Organisasi Gereja', 'PA', 'PT', 'GP', 'PKB', 'PKP', 'PKLU', 'Germasa', 'PEG', 'Inforkom-Litbang'].includes(activeTab) ? 'active' : ''} ${isDropdownOpen ? 'dropdown-open' : ''}`}>
+          <li className={`dropdown ${['Direktori', 'PHMJ', 'Pendeta', 'Majelis Jemaat', 'PA', 'PT', 'GP', 'PKB', 'PKP', 'PKLU', 'Germasa', 'PEG', 'Inforkom-Litbang'].includes(activeTab) ? 'active' : ''} ${isDropdownOpen ? 'dropdown-open' : ''}`}>
             <span onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-              Organisasi Gereja {isDropdownOpen ? '▴' : '▾'}
+              Direktori {isDropdownOpen ? '▴' : '▾'}
             </span>
             <ul className="dropdown-menu">
-              <li onClick={() => { setActiveTab('Organisasi Gereja'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Struktur Organisasi</li>
+              <li className="dropdown-submenu">
+                <span onClick={(e) => { e.stopPropagation(); setActiveTab('Direktori'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>FUNGSIONARIS ▸</span>
+                <ul className="submenu-list">
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('PHMJ'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>PHMJ</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('Pendeta'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Pendeta</li>
+                  <li onClick={(e) => { e.stopPropagation(); setActiveTab('Majelis Jemaat'); setIsMobileMenuOpen(false); setIsDropdownOpen(false); navigate('/'); }}>Majelis Jemaat</li>
+                </ul>
+              </li>
               <li className="dropdown-submenu">
                 <span>PELKAT ▸</span>
                 <ul className="submenu-list">
