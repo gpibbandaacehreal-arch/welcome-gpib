@@ -13,7 +13,7 @@ export interface DataJemaat {
   no_telepon: string;
   status_warga: 'Jemaat Biasa' | 'Simpatisan' | 'Presbiter' | 'Majelis';
 
-  // 2. Riwayat Sawkramen & Gerejawi
+  // 2. Riwayat Sakramen & Gerejawi
   tgl_baptis: string;    // YYYY-MM-DD
   tgl_sidi: string;       // YYYY-MM-DD
   status_perkawinan_gereja: 'Belum Menikah' | 'Menikah' | 'Janda/Duda';

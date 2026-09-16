@@ -269,12 +269,12 @@ const DataUmatForm: React.FC<DataUmatFormProps> = ({
       </div>
 
       {/* ═══════════════════════════════════════════════
-          SECTION 2: RIWAYAT SAWKRAMEN & GEREJAWI
+          SECTION 2: RIWAYAT SAKRAMEN & GEREJAWI
           ═══════════════════════════════════════════════ */}
       <div className="form-section">
         <h3 className="form-section-title">
           <span className="section-number">2</span>
-          Riwayat Sawkramen &amp; Gerejawi
+          Riwayat Sakramen &amp; Gerejawi
         </h3>
         <div className="form-grid">
           <div className="form-group">
