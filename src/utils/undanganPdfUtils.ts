@@ -61,26 +61,29 @@ export interface UndanganRiwayatRow {
 }
 
 /**
- * Membuat PDF tabel Riwayat Undangan (A4 landscape agar muat).
- * pdf-lib di-import dinamis — ringan, hanya dimuat saat tombol ditekan.
+ * Membuat PDF tabel Riwayat Undangan (A4 landscape, multi-halaman otomatis).
+ * Baris yang tidak muat lagi di halaman saat ini dilanjutkan ke halaman baru
+ * dengan header tabel diulang — pdf-lib di-import dinamis agar bundle ringan.
  */
 export const generateRiwayatUndanganPDF = async (rows: UndanganRiwayatRow[]): Promise<Uint8Array> => {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
 
   const doc = await PDFDocument.create();
   // A4 landscape: 842 x 595 pt
-  const page = doc.addPage([842, 595]);
+  const PAGE_W = 842;
+  const PAGE_H = 595;
+  const margin = 40;
+  const headerH = 22;
+  const dataRowH = 28;
+  // Batas bawah area tabel: sisakan ruang footer (total + tanggal + nomor halaman)
+  const bottomLimit = margin + 30;
+
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  const margin = 40;
-  let y = 595 - margin;
-
-  // Judul
-  page.drawText('Riwayat Undangan — GPIB Banda Aceh', {
-    x: margin, y: y - 14, size: 16, font: fontBold, color: rgb(0.1, 0.1, 0.1),
-  });
-  y -= 40;
+  let page = doc.addPage([PAGE_W, PAGE_H]);
+  let y = PAGE_H - margin;
+  let pageNumber = 1;
 
   // Konfigurasi kolom: [label, lebar]
   const cols: Array<[string, number]> = [
@@ -91,10 +94,41 @@ export const generateRiwayatUndanganPDF = async (rows: UndanganRiwayatRow[]): Pr
   cols.forEach(([, w]) => { colX.push(acc); acc += w; });
   const tableW = acc - margin;
 
+  // ── Estimasi total halaman (untuk footer "Halaman X dari Y") ──
+  // Halaman 1: judul memakan ~40pt. Halaman lanjutan: header tabel diulang.
+  const rowsOnFirstPage = Math.floor((PAGE_H - margin - 40 - headerH - bottomLimit) / dataRowH);
+  const rowsOnOtherPages = Math.floor((PAGE_H - margin - headerH - bottomLimit) / dataRowH);
+  const totalPages = rows.length <= rowsOnFirstPage
+    ? 1
+    : 1 + Math.ceil((rows.length - rowsOnFirstPage) / rowsOnOtherPages);
+
+  const drawFooter = (pageNum: number) => {
+    page.drawText(`Total: ${rows.length} undangan | Dicetak: ${new Date().toLocaleString('id-ID')}`, {
+      x: margin, y: margin - 12, size: 8, font, color: rgb(0.45, 0.45, 0.45),
+    });
+    if (totalPages > 1) {
+      page.drawText(`Halaman ${pageNum} dari ${totalPages}`, {
+        x: PAGE_W - margin - 90, y: margin - 12, size: 8, font, color: rgb(0.45, 0.45, 0.45),
+      });
+    }
+  };
+
+  const drawHeaderRow = () => drawRow(cols.map(([label]) => label), true, true);
+
   const drawRow = (cells: string[], bold = false, isHeader = false) => {
     const f = bold ? fontBold : font;
     const size = isHeader ? 10 : 9;
-    const rowH = isHeader ? 22 : 28;
+    const rowH = isHeader ? headerH : dataRowH;
+
+    // Pindah halaman bila baris ini tidak muat lagi di halaman saat ini
+    if (y - rowH < bottomLimit) {
+      drawFooter(pageNumber);
+      page = doc.addPage([PAGE_W, PAGE_H]);
+      pageNumber += 1;
+      y = PAGE_H - margin;
+      drawHeaderRow();
+    }
+
     // Latar header
     if (isHeader) {
       page.drawRectangle({ x: margin, y: y - rowH + 6, width: tableW, height: rowH, color: rgb(0.9, 0.92, 0.9) });
@@ -132,15 +166,19 @@ export const generateRiwayatUndanganPDF = async (rows: UndanganRiwayatRow[]): Pr
     y -= rowH;
   };
 
-  drawRow(cols.map(([label]) => label), true, true);
+  // Judul (hanya halaman pertama)
+  page.drawText('Riwayat Undangan — GPIB Banda Aceh', {
+    x: margin, y: y - 14, size: 16, font: fontBold, color: rgb(0.1, 0.1, 0.1),
+  });
+  y -= 40;
+
+  drawHeaderRow();
   rows.forEach(r => {
     drawRow([String(r.no), r.nama_undangan, r.pic || '-', r.tanggal_undangan || '-']);
   });
 
-  // Footer: jumlah baris + tanggal cetak
-  page.drawText(`Total: ${rows.length} undangan | Dicetak: ${new Date().toLocaleString('id-ID')}`, {
-    x: margin, y: y - 16, size: 8, font, color: rgb(0.45, 0.45, 0.45),
-  });
+  // Footer halaman terakhir
+  drawFooter(pageNumber);
 
   return doc.save();
 };
