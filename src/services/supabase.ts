@@ -9,28 +9,6 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 
 export const supabase = createClient(SUPABASE_URL || '', SUPABASE_ANON_KEY || '');
 
-export interface SupabaseProposal {
-  id?: number;
-  nomor_surat: string;
-  tujuan_surat: string;
-  pemohon: string;
-  tanggal_surat: string;
-  no_urut: number;
-  link_download: string;
-}
-
-/**
- * Tipe data untuk tabel riwayat_undangan di Supabase (menu "Undangan").
- * Nama undangan (1-2 baris) dicetak ke PDF; PIC hanya untuk catatan web.
- */
-export interface SupabaseUndangan {
-  id?: number;
-  nama_undangan: string;
-  pic: string;
-  tanggal_undangan: string;
-  created_at?: string;
-}
-
 /**
  * Tipe data untuk tabel data_jemaat di Supabase.
  * Digunakan untuk sinkronisasi langsung dengan Supabase.

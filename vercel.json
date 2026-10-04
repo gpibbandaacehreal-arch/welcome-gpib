@@ -16,7 +16,7 @@
       ]
     },
     {
-      "source": "/(favicon\\.png|LOGO_GPIB_BANDA_ACEH\\.png|COVER\\.pdf|ISI\\.pdf|undangan-gpib-30-tahun\\.pdf)",
+      "source": "/(favicon\\.png|LOGO_GPIB_BANDA_ACEH\\.png)",
       "headers": [
         {
           "key": "Cache-Control",

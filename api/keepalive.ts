@@ -11,7 +11,7 @@ export default async function handler(
   res: VercelResponse
 ) {
   const { error } = await supabase
-    .from('riwayat_download')
+    .from('site_settings')
     .select('id')
     .limit(1)
 

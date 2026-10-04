@@ -8,13 +8,9 @@ import ErrorBoundary from './components/ErrorBoundary'
 // Keduanya dipecah ke chunk terpisah agar bundle awal tetap ringan.
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'))
 const APanel = lazy(() => import('./components/APanel'))
-// Halaman Undangan dipecah ke chunk terpisah — pdf-lib & template baru dimuat saat tombol generate ditekan.
-const DownloadProposal = lazy(() => import('./components/DownloadProposal'))
 const DataUmatForm = lazy(() => import('./components/DataUmatForm'))
 const DataUmatExport = lazy(() => import('./components/DataUmatExport'))
-const UndanganGenerator = lazy(() => import('./components/UndanganGenerator'))
 import { toImageKitUrl, filterHtmlImages } from './utils/imageUtils'
-import { supabase, type SupabaseProposal, type SupabaseUndangan } from './services/supabase'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import { normalizeSubMenuKey } from './utils/menuUtils'
@@ -26,7 +22,7 @@ import type { DataJemaat } from './types/dataUmat'
 
 
 // Types
-type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Direktori' | 'Data Umat' | 'Download' | 'Login' 
+type Tab = 'Beranda' | 'Jadwal Ibadah' | 'Direktori' | 'Data Umat' | 'Login' 
   | 'PA' | 'PT' | 'GP' | 'PKB' | 'PKP' | 'PKLU' 
   | 'Germasa' | 'PEG' | 'Inforkom-Litbang' | 'APanel' | (string & {});
 
@@ -58,7 +54,6 @@ interface FullContent {
   settings: SiteSettings;
   pages: Record<string, PageContent>;
   umat: UmatRecord[];
-  proposals: SupabaseProposal[]; // New field for shared proposal history
 }
 
 const DEFAULT_CONTENT: FullContent = {
@@ -129,8 +124,7 @@ const DEFAULT_CONTENT: FullContent = {
       content: '<p><strong>Tugas Pokok:</strong><br>Mengelola sistem informasi, komunikasi publik, tata organisasi, serta melakukan penelitian dan pengembangan jemaat.</p><p><strong>Fungsi:</strong><br>1. Mengelola media komunikasi gereja (website, media sosial, warta jemaat).<br>2. Melakukan pendataan dan pengolahan data umat secara digital.<br>3. Melakukan kajian dan evaluasi program kerja untuk pengembangan kualitas jemaat ke depan.</p>'
     }
   },
-  umat: [],
-  proposals: []
+  umat: []
 };
 
 // Interval polling sinkronisasi Google Drive (detik). Setiap pengunjung memicu
@@ -158,8 +152,7 @@ function App() {
         return {
           ...DEFAULT_CONTENT,
           ...parsed,
-          pages: { ...DEFAULT_CONTENT.pages, ...parsed.pages },
-          proposals: parsed.proposals || []
+          pages: { ...DEFAULT_CONTENT.pages, ...parsed.pages }
         }
       } catch {
         return DEFAULT_CONTENT
@@ -178,8 +171,6 @@ function App() {
     }
   })
   const [syncError, setSyncError] = useState(false)
-  const [supabaseProposals, setSupabaseProposals] = useState<SupabaseProposal[]>([])
-  const [supabaseUndangan, setSupabaseUndangan] = useState<SupabaseUndangan[]>([])
   
   // Editor states
   const [editTitle, setEditTitle] = useState('')
@@ -330,92 +321,6 @@ function App() {
       clearTimeout(timer)
     }
   }, [syncError])
-
-  const fetchSupabaseProposals = async () => {
-    console.log('Memulai fetch proposal dari Supabase...');
-    try {
-      const { data, error } = await supabase
-        .from('riwayat_download')
-        .select('*')
-        .order('no_urut', { ascending: false });
-      
-      if (error) {
-        console.error('Error Supabase fetch:', error.message);
-        // If it's a 404 or table not found, we should probably warn the user
-        if (error.code === 'PGRST116' || error.message.includes('not found')) {
-          console.error('PENTING: Tabel riwayat_download belum dibuat di Supabase!');
-        }
-      } else if (data) {
-        console.log('Berhasil fetch Supabase:', data.length, 'data ditemukan');
-        setSupabaseProposals(data);
-      }
-    } catch (err) {
-      console.error('Exception saat fetch Supabase:', err);
-    }
-  };
-
-  const fetchSupabaseUndangan = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('riwayat_undangan')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error Supabase fetch undangan:', error.message);
-        if (error.code === 'PGRST116' || error.message.includes('not found') || error.message.includes('schema cache')) {
-          console.error('PENTING: Tabel riwayat_undangan belum dibuat di Supabase! Jalankan supabase/migrations/20260910_create_riwayat_undangan.sql.');
-        }
-      } else if (data) {
-        setSupabaseUndangan(data);
-      }
-    } catch (err) {
-      console.error('Exception saat fetch Supabase undangan:', err);
-    }
-  };
-
-  // Riwayat undangan + realtime Supabase hanya aktif saat tab Undangan dibuka —
-  // hemat bandwidth & koneksi websocket untuk pengunjung yang tidak membutuhkannya.
-  useEffect(() => {
-    if (activeTab !== 'Undangan') return;
-
-    const initialTimer = setTimeout(() => { void fetchSupabaseUndangan(); }, 0);
-    const channel = supabase
-      .channel('public:riwayat_undangan')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'riwayat_undangan' }, () => {
-        void fetchSupabaseUndangan();
-      })
-      .subscribe();
-
-    return () => {
-      clearTimeout(initialTimer);
-      void supabase.removeChannel(channel);
-    };
-  }, [activeTab]);
-
-  // Riwayat download + realtime Supabase hanya aktif saat tab Download dibuka —
-  // hemat bandwidth & koneksi websocket untuk pengunjung yang tidak membutuhkannya.
-  useEffect(() => {
-    if (activeTab !== 'Download') return;
-
-    // Timer 0 ms agar tidak ada setState sinkron di body effect (pola react-hooks)
-    const initialTimer = setTimeout(() => { void fetchSupabaseProposals(); }, 0);
-    const channel = supabase
-      .channel('public:riwayat_download')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'riwayat_download' }, (payload) => {
-        console.log('Real-time change detected!', payload);
-        void fetchSupabaseProposals();
-      })
-      .subscribe((status) => {
-        console.log('Supabase subscription status:', status);
-      });
-
-    return () => {
-      console.log('Cleaning up Supabase channel');
-      clearTimeout(initialTimer);
-      void supabase.removeChannel(channel);
-    };
-  }, [activeTab]);
 
   // Sinkronkan field editor saat tab berubah (hanya saat login) — pola "adjust state during render"
   const [lastEditorSyncKey, setLastEditorSyncKey] = useState('')
@@ -809,121 +714,6 @@ function App() {
   // END NEW DATA UMAT
   // ═══════════════════════════════════════════════════════════════
 
-  const handleAddProposalSupabase = async (pemohon: string, tujuanSurat: string, noUrut: number, nomorSurat: string) => {
-    const now = new Date();
-    const dd = String(now.getDate()).padStart(2, '0');
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const yyyy = now.getFullYear();
-    const tanggalSurat = `${dd}/${mm}/${yyyy}`;
-
-    const newRecord = {
-      nomor_surat: nomorSurat,
-      tujuan_surat: tujuanSurat,
-      pemohon,
-      tanggal_surat: tanggalSurat,
-      no_urut: noUrut,
-      link_download: '-'
-    };
-
-    const { data, error } = await supabase
-      .from('riwayat_download')
-      .insert([newRecord])
-      .select();
-
-    if (error) {
-      console.error('Error adding proposal:', error);
-      throw error;
-    }
-    return data;
-  };
-
-  const handleEditProposalSupabase = async (id: number, updates: Partial<SupabaseProposal>) => {
-    const { data, error } = await supabase
-      .from('riwayat_download')
-      .update(updates)
-      .eq('id', id)
-      .select();
-    if (error) {
-      console.error('Error updating proposal:', error);
-      throw error;
-    }
-    if (!data || data.length === 0) {
-      throw new Error('Gagal memperbaharui data. Akses (RLS) di Supabase memblokir edit. Pastikan RLS diizinkan untuk UPDATE atau matikan RLS pada tabel riwayat_download di Supabase SQL Editor.');
-    }
-    await fetchSupabaseProposals();
-  };
-
-  const handleDeleteProposalSupabase = async (id: number) => {
-    const { data, error } = await supabase
-      .from('riwayat_download')
-      .delete()
-      .eq('id', id)
-      .select();
-    if (error) {
-      console.error('Error deleting proposal:', error);
-      throw error;
-    }
-    if (!data || data.length === 0) {
-      throw new Error('Gagal menghapus data. Akses (RLS) di Supabase memblokir hapus. Pastikan RLS diizinkan untuk DELETE atau matikan RLS pada tabel riwayat_download di Supabase SQL Editor.');
-    }
-    await fetchSupabaseProposals();
-  };
-
-  const handleAddUndanganSupabase = async (namaUndangan: string, pic: string, tanggalUndangan: string) => {
-    const newRecord = {
-      nama_undangan: namaUndangan,
-      pic,
-      tanggal_undangan: tanggalUndangan
-    };
-
-    const { data, error } = await supabase
-      .from('riwayat_undangan')
-      .insert([newRecord])
-      .select();
-
-    if (error) {
-      console.error('Error adding undangan:', error);
-      if (error.message.includes('schema cache') || error.message.includes('not found')) {
-        throw new Error('Tabel riwayat_undangan belum ada di Supabase. Jalankan supabase/migrations/20260910_create_riwayat_undangan.sql di Supabase SQL Editor.');
-      }
-      throw error;
-    }
-    return data;
-  };
-
-  const handleDeleteUndanganSupabase = async (id: number) => {
-    const { data, error } = await supabase
-      .from('riwayat_undangan')
-      .delete()
-      .eq('id', id)
-      .select();
-    if (error) {
-      console.error('Error deleting undangan:', error);
-      throw error;
-    }
-    if (!data || data.length === 0) {
-      throw new Error('Gagal menghapus data. Akses (RLS) di Supabase memblokir hapus. Pastikan RLS diizinkan untuk DELETE pada tabel riwayat_undangan di Supabase SQL Editor.');
-    }
-    await fetchSupabaseUndangan();
-  };
-
-  const handleEditUndanganSupabase = async (id: number, updates: Partial<SupabaseUndangan>) => {
-    const { data, error } = await supabase
-      .from('riwayat_undangan')
-      .update(updates)
-      .eq('id', id)
-      .select();
-    if (error) {
-      console.error('Error updating undangan:', error);
-      throw error;
-    }
-    if (!data || data.length === 0) {
-      throw new Error('Gagal memperbaharui data. Akses (RLS) di Supabase memblokir edit. Pastikan RLS diizinkan untuk UPDATE pada tabel riwayat_undangan di Supabase SQL Editor.');
-    }
-    await fetchSupabaseUndangan();
-  };
-
-
   const renderPage = () => {
     if (activeTab === 'APanel' || location.pathname === '/admin/apanel') {
       return <APanel settings={siteContent.settings} onSaveSettings={handleSaveSettings} onLogout={handleLogout} />;
@@ -940,30 +730,6 @@ function App() {
 
     if (activeTab === 'Data Umat') {
       return renderDataUmat()
-    }
-
-    if (activeTab === 'Download') {
-      return (
-        <DownloadProposal 
-          isLoggedIn={isLoggedIn} 
-          proposals={supabaseProposals}
-          onAddProposal={handleAddProposalSupabase}
-          onEditProposal={handleEditProposalSupabase}
-          onDeleteProposal={handleDeleteProposalSupabase}
-        />
-      )
-    }
-
-    if (activeTab === 'Undangan') {
-      return (
-        <UndanganGenerator
-          isLoggedIn={isLoggedIn}
-          undanganList={supabaseUndangan}
-          onAddUndangan={handleAddUndanganSupabase}
-          onEditUndangan={handleEditUndanganSupabase}
-          onDeleteUndangan={handleDeleteUndanganSupabase}
-        />
-      )
     }
 
     // Custom menu page: render folder icons for the active custom menu
@@ -1327,20 +1093,6 @@ function App() {
               📂 {m.name}
             </li>
           ))}
-
-          <li 
-            className={activeTab === 'Download' ? 'active' : ''}
-            onClick={() => { setActiveTab('Download'); setIsMobileMenuOpen(false); navigate('/'); }}
-          >
-            PROPOSAL
-          </li>
-
-          <li 
-            className={activeTab === 'Undangan' ? 'active' : ''}
-            onClick={() => { setActiveTab('Undangan'); setIsMobileMenuOpen(false); navigate('/'); }}
-          >
-            Undangan
-          </li>
 
           {isLoggedIn ? (
             <>
