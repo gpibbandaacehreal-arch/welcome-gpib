@@ -1072,3 +1072,54 @@ button {
   padding-top: 20px;
   border-top: 1px solid #eee;
 }
+
+/* ── Run Text (informasi berjalan di bawah navbar) ── */
+.running-text-bar {
+  background: #fffbeb;
+  border-bottom: 1px solid #fde68a;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 8px 0;
+  line-height: 1.4;
+}
+
+.running-text-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: running-text-marquee linear infinite;
+  will-change: transform;
+}
+
+/* Berhenti sejenak agar mudah dibaca saat disentuh/di-hover */
+.running-text-bar:hover .running-text-track {
+  animation-play-state: paused;
+}
+
+.running-text-item {
+  color: #92400e;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding-right: 5rem;
+}
+
+@keyframes running-text-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Hormati preferensi pengguna yang mematikan animasi */
+@media (prefers-reduced-motion: reduce) {
+  .running-text-track {
+    animation: none;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .running-text-item {
+    display: inline;
+    padding-right: 0;
+  }
+  .running-text-item + .running-text-item {
+    display: none;
+  }
+}

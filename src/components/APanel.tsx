@@ -86,6 +86,7 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
   const [navTextColor, setNavTextColor] = useState(settings.navTextColor || '#ffffff');
   const [primaryColor, setPrimaryColor] = useState(settings.primaryColor || '#8b0000');
   const [siteBgColor, setSiteBgColor] = useState(settings.siteBgColor || '#ffffff');
+  const [runningText, setRunningText] = useState(settings.runningText || '');
 
   // Custom Menu State
   const [customMenus, setCustomMenus] = useState<CustomMenuItem[]>(settings.customMenus || []);
@@ -259,6 +260,7 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
       navTextColor,
       primaryColor,
       siteBgColor,
+      runningText,
       customMenus,
     };
 
@@ -601,6 +603,37 @@ export const APanel: React.FC<APanelProps> = ({ settings, onSaveSettings, onLogo
                   style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '130px', fontFamily: 'monospace' }}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* ───── RUN TEXT INFORMASI ───── */}
+          <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #cbd5e1', marginBottom: '25px' }}>
+            <h4 style={{ marginTop: 0, color: '#0f172a', fontSize: '1.1rem' }}>📢 Run Text Informasi</h4>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 18px 0' }}>
+              Teks berjalan yang tampil di ruang kosong tepat di bawah menu navigasi. Gunakan untuk info penting,
+              misalnya panduan ubah DNS saat terkena Internet Positif, ucapan ulang tahun, atau pengumuman jemaat.
+              Kosongkan untuk menyembunyikan bar ini. Pisahkan beberapa info dengan tanda &nbsp;;&nbsp; atau &nbsp;•&nbsp;.
+            </p>
+            <textarea
+              value={runningText}
+              onChange={(e) => setRunningText(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="Contoh: PENTING: Jika gambar tidak tampil, ubah DNS HP Anda ke 8.8.8.8 / 8.8.4.4 (lihat panduan di menu Warta). • Selamat ulang tahun bagian Tuhan yang berulang tahun bulan ini! God bless."
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                fontSize: '0.95rem',
+                fontFamily: "'Inter', sans-serif",
+                boxSizing: 'border-box',
+                resize: 'vertical'
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '0.8rem', color: '#64748b' }}>
+              <span>Pratinjau kecepatan: makin panjang teks, makin lambat pergerakannya (otomatis).</span>
+              <span>{runningText.length}/500 karakter</span>
             </div>
           </div>
 

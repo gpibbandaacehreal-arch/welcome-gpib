@@ -1128,6 +1128,18 @@ function App() {
         </ul>
       </nav>
 
+      {siteContent.settings.runningText && (
+        <div className="running-text-bar" title="Berhenti sejenak saat disentuh">
+          <div
+            className="running-text-track"
+            style={{ animationDuration: `${Math.max(15, siteContent.settings.runningText.length * 0.4)}s` }}
+          >
+            <span className="running-text-item">📢 {siteContent.settings.runningText}</span>
+            <span className="running-text-item" aria-hidden="true">📢 {siteContent.settings.runningText}</span>
+          </div>
+        </div>
+      )}
+
       <main className="main-content">
         <ErrorBoundary>
           <Suspense fallback={

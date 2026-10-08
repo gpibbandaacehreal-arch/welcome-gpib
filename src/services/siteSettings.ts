@@ -37,6 +37,8 @@ export interface SiteSettings {
   navTextColor?: string;
   primaryColor?: string;
   siteBgColor?: string;
+  /** Teks berjalan (running text) di bawah navbar untuk info penting; kosong = disembunyikan */
+  runningText?: string;
   customMenus?: CustomMenuItem[];
 }
 
@@ -57,6 +59,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   navTextColor: '#ffffff',
   primaryColor: '#8b0000',
   siteBgColor: '#ffffff',
+  runningText: '',
   customMenus: []
 };
 
@@ -102,6 +105,7 @@ export const siteSettingsService = {
           navTextColor: data.nav_text_color || cachedSettings.navTextColor || DEFAULT_SITE_SETTINGS.navTextColor,
           primaryColor: data.primary_color || cachedSettings.primaryColor || DEFAULT_SITE_SETTINGS.primaryColor,
           siteBgColor: data.site_bg_color || cachedSettings.siteBgColor || DEFAULT_SITE_SETTINGS.siteBgColor,
+          runningText: data.running_text || cachedSettings.runningText || DEFAULT_SITE_SETTINGS.runningText,
           customMenus: Array.isArray(data.custom_menus) ? data.custom_menus : (cachedSettings.customMenus || []),
         };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(remoteSettings));
@@ -146,6 +150,7 @@ export const siteSettingsService = {
         nav_text_color: cleanSettings.navTextColor,
         primary_color: cleanSettings.primaryColor,
         site_bg_color: cleanSettings.siteBgColor,
+        running_text: cleanSettings.runningText || '',
         custom_menus: cleanSettings.customMenus || [],
         updated_at: new Date().toISOString()
       };
